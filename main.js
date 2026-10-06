@@ -87,12 +87,22 @@ scene.add( windowLight, windowLight.target );
 // ---------- load the kitchen ----------
 const interactables = [];
 const flickerLights = [];
+const twinkleLights = [];
+const twinkleBulbs = [];
 
 new GLTFLoader().load( '/models/kitchen.glb', ( gltf ) => {
 
 	const room = gltf.scene;
 
 	room.traverse( ( obj ) => {
+
+		if ( obj.isMesh && obj.name.startsWith( 'XLights_Bulbs' ) ) {
+
+			// each colour of bulb gets its own material so it can twinkle on its own
+			obj.material = obj.material.clone();
+			twinkleBulbs.push( { material: obj.material, base: obj.material.emissiveIntensity ?? 1, seed: Math.random() * 100 } );
+
+		}
 
 		if ( obj.isMesh && obj.userData.baked ) {
 
@@ -121,6 +131,8 @@ new GLTFLoader().load( '/models/kitchen.glb', ( gltf ) => {
 				obj.shadow.bias = - 0.0005;
 
 			}
+
+			if ( obj.name.startsWith( 'Light_XLights' ) || obj.name === 'Light_Tree_Glow' ) twinkleLights.push( { light: obj, base: obj.intensity, seed: Math.random() * 100 } );
 
 			if ( obj.name.startsWith( 'Candle' ) ) flickerLights.push( { light: obj, base: obj.intensity, seed: Math.random() * 100 } );
 
@@ -217,6 +229,10 @@ function animate( time ) {
 	}
 
 	constrainCamera();
+	// christmas lights: slow, soft pulse (each light/bulb is offset by its seed)
+	for ( const f of twinkleLights ) f.light.intensity = f.base * ( 0.7 + 0.3 * Math.sin( t * 2.2 + f.seed ) );
+	for ( const b of twinkleBulbs ) b.material.emissiveIntensity = b.base * ( 0.6 + 0.4 * Math.sin( t * 2.2 + b.seed ) );
+
 	controls.update();
 	updateHover();
 	renderPipeline.render();
