@@ -3,12 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Three.js Exercise</title>
+    <title>Cookie Baking Simulator</title>
     <style>
-      html, body { margin: 0; overflow: hidden; }
+      html, body { margin: 0; overflow: hidden; background: #0d0a08; }
+      #hint {
+        position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%);
+        padding: 8px 16px; border-radius: 999px;
+        background: rgba(20, 12, 8, 0.75); color: #ffe8c8;
+        font: 500 14px/1.2 system-ui, sans-serif; text-transform: capitalize;
+        pointer-events: none; opacity: 0; transition: opacity 0.15s;
+      }
     </style>
   </head>
   <body>
+    <div id="hint"></div>
     <script type="module" src="/main.js"></script>
   </body>
 </html>
