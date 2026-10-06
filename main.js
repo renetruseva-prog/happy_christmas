@@ -8,6 +8,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 // lights match the Blender render.
 const LIGHT_SCALE = 0.4 / 683;
 
+// the baked lighting texture is saved at half brightness (see the bake step in Blender)
+const BAKE_BOOST = 2;
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color( 0x0d0a08 );
 
@@ -27,8 +30,45 @@ document.body.appendChild( renderer.domElement );
 const controls = new OrbitControls( camera, renderer.domElement );
 controls.target.set( 0.15, 0.85, - 0.6 ); // the ingredients table
 controls.enableDamping = true;
+controls.minDistance = 0.3;
 controls.maxDistance = 4;
 controls.update();
+
+// ---------- keep the camera inside the kitchen ----------
+// the room's inside (walls at x ±2.5, z ±2, floor 0, ceiling 2.7) minus a margin,
+// so the camera never reaches a wall, the window, the ceiling beams or the floor
+const MAX_DISTANCE = 4;
+const roomBounds = new THREE.Box3(
+	new THREE.Vector3( - 2.35, 0.15, - 1.85 ),
+	new THREE.Vector3( 2.35, 2.45, 1.85 ),
+);
+const viewDir = new THREE.Vector3();
+
+function distanceToWall( origin, dir ) {
+
+	// how far a ray from inside the box travels before leaving it (per axis "slab" test)
+	let t = Infinity;
+	for ( const axis of [ 'x', 'y', 'z' ] ) {
+
+		if ( dir[ axis ] > 1e-6 ) t = Math.min( t, ( roomBounds.max[ axis ] - origin[ axis ] ) / dir[ axis ] );
+		else if ( dir[ axis ] < - 1e-6 ) t = Math.min( t, ( roomBounds.min[ axis ] - origin[ axis ] ) / dir[ axis ] );
+
+	}
+
+	return t;
+
+}
+
+function constrainCamera() {
+
+	// panning (right-drag) moves the target: keep it inside the room too
+	roomBounds.clampPoint( controls.target, controls.target );
+
+	// zooming/orbiting out stops where the camera would hit a wall
+	viewDir.subVectors( camera.position, controls.target ).normalize();
+	controls.maxDistance = Math.max( controls.minDistance, Math.min( MAX_DISTANCE, distanceToWall( controls.target, viewDir ) ) );
+
+}
 
 // glow on the christmas lights, candles and oven
 const renderPipeline = new THREE.RenderPipeline( renderer );
@@ -54,8 +94,18 @@ new GLTFLoader().load( '/models/kitchen.glb', ( gltf ) => {
 
 	room.traverse( ( obj ) => {
 
-		if ( obj.isMesh ) {
+		if ( obj.isMesh && obj.userData.baked ) {
 
+			// lighting is already in the baked texture: show it unlit.
+			// The bake was stored at half brightness to keep highlights, so double it back.
+			obj.material = new THREE.MeshBasicNodeMaterial( {
+				map: obj.material.map,
+				color: new THREE.Color( BAKE_BOOST, BAKE_BOOST, BAKE_BOOST ),
+			} );
+
+		} else if ( obj.isMesh ) {
+
+			// objects that move (props, oven door) stay lit in real time
 			obj.castShadow = true;
 			obj.receiveShadow = true;
 
@@ -93,6 +143,14 @@ new GLTFLoader().load( '/models/kitchen.glb', ( gltf ) => {
 	}
 
 	scene.add( room );
+
+	// baked surfaces can't receive live shadows, so an invisible plane on the
+	// table catches the shadows of the props that sit (and move) on it
+	const tableShadow = new THREE.Mesh( new THREE.PlaneGeometry( 1.7, 0.95 ), new THREE.ShadowNodeMaterial( { opacity: 0.5 } ) );
+	tableShadow.rotation.x = - Math.PI / 2;
+	tableShadow.position.set( 0, 0.781, - 0.15 );
+	tableShadow.receiveShadow = true;
+	scene.add( tableShadow );
 
 } );
 
@@ -158,6 +216,7 @@ function animate( time ) {
 
 	}
 
+	constrainCamera();
 	controls.update();
 	updateHover();
 	renderPipeline.render();
