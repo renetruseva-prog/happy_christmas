@@ -2,7 +2,7 @@
 // their bag/jar, an egg cracks open, butter drops in. Everything lands on the bowl's
 // contents, which build up layer by layer.
 import * as THREE from 'three/webgpu';
-import { color, float, mix, mx_noise_float, positionWorld, smoothstep, step, time, vec3 } from 'three/tsl';
+import { color, float, mix, mx_noise_float, positionWorld, smoothstep, step, time, uniform, vec3 } from 'three/tsl';
 import { cancelTween } from './tween.js';
 
 const GRAVITY = 9.8;
@@ -47,6 +47,7 @@ function arcLerp( target, from, to, k, height ) {
 // ---------- the contents of the bowl ----------
 const layers = [];
 const taken = []; // where yolks and the butter lie, so the next one lands somewhere free
+const solids = []; // the yolks and the butter: they disappear into the dough when it's mixed
 
 // the spot in the bowl (within `reach` of the middle, or on that circle when `ring` is set)
 // furthest from everything already lying there
@@ -91,7 +92,7 @@ function surfaceY( x, z ) {
 // It grows from nothing (growth 0) to full (1).
 class Layer {
 
-	constructor( { x, z, radius, height, material, lumps = 0.12, clumps = 0 } ) {
+	constructor( { x, z, radius, height, material, lumps = 0.12, clumps = 0, bottom = null } ) {
 
 		this.x = x;
 		this.z = z;
@@ -101,7 +102,7 @@ class Layer {
 		this.clumps = clumps;
 		this.seed = Math.random() * 100;
 		this.growth = 0;
-		this.bottom = surfaceY( x, z ); // what it lands on, under its peak
+		this.bottom = bottom ?? surfaceY( x, z ); // what it lands on, under its peak
 		this.steepness = height / ( radius * radius );
 
 		// the mesh covers the whole bowl; only the part above the earlier surface shows
@@ -254,6 +255,14 @@ class Grains {
 
 	}
 
+	clear() {
+
+		this.state.fill( 0 );
+		for ( let i = 0; i < this.count; i ++ ) this.mesh.setMatrixAt( i, HIDDEN );
+		this.mesh.instanceMatrix.needsUpdate = true;
+
+	}
+
 	update( dt ) {
 
 		const { pos, vel } = this;
@@ -377,6 +386,7 @@ function updatePuffs( dt ) {
 
 // ---------- materials ----------
 let materials = null;
+const swirl = uniform( 0 ); // turns the dough's pattern while it's being mixed
 let flourGrains = null;
 let sugarGrains = null;
 let flourStream = null;
@@ -398,8 +408,14 @@ function makeMaterials() {
 	sugar.colorNode = mix( color( 0xcdc8bf ), color( 0xffffff ), step( - 0.1, speck ) );
 	sugar.roughnessNode = mix( float( 0.6 ), float( 0.08 ), step( 0.3, speck ) );
 
+	// dough: warm golden beige, mottled; the pattern shifts with `swirl` so it churns while mixing
+	const dough = new THREE.MeshStandardNodeMaterial( { roughness: 0.75, vertexColors: true } );
+	const churn = mx_noise_float( positionWorld.mul( 60 ).add( vec3( swirl.sin().mul( 0.6 ), 0, swirl.cos().mul( 0.6 ) ) ) );
+	dough.colorNode = mix( color( 0xc8975a ), color( 0xebd2a2 ), churn.mul( 0.5 ).add( 0.5 ) ).mul( mx_noise_float( positionWorld.mul( 300 ) ).mul( 0.06 ).add( 0.97 ) );
+
 	return {
 		flour,
+		dough,
 		stream,
 		sugar,
 		flourGrain: new THREE.MeshStandardNodeMaterial( { color: 0xf3f3f0, roughness: 1 } ),
@@ -592,12 +608,14 @@ export function restoreInBowl( root ) {
 		yolk.position.set( spot.x, whiteLayer.bottom + whiteLayer.height + yolkRadius * 0.7, spot.z );
 		yolk.scale.set( 1.12, 0.7, 1.12 );
 		scene.add( yolk );
+		solids.push( yolk );
 
 	} else if ( kind === 'Butter' ) {
 
 		const rest = butterRest( root );
 		root.position.copy( rest.position );
 		root.quaternion.copy( rest.quaternion );
+		solids.push( root );
 
 	} else root.visible = false;
 
@@ -858,6 +876,7 @@ async function crackEgg( root ) {
 
 	} );
 
+	solids.push( yolk );
 	const yolkLands = fall( yolk, bottom + whiteLayer.height + yolkRadius * 0.7, { delay: 0.05 } ).then( () =>
 		animate( 0.15, ( k ) => yolk.scale.set( 1 + 0.12 * k, 1 - 0.3 * k, 1 + 0.12 * k ) ), // squashes a little
 	);
@@ -950,6 +969,74 @@ async function dropButter( root ) {
 
 	} );
 	root.position.y = restY;
+	solids.push( root );
+
+}
+
+// ---------- mixing: everything in the bowl turns into one smooth dough ----------
+let dough = null;
+
+// the inside of the bowl, for the mixer: middle of the opening, rim height, inside radius
+export function bowlInfo() {
+
+	return { center: bowl.center.clone(), rimY: bowl.rimY, radius: bowl.radius };
+
+}
+
+// how high the bowl's contents reach at (x, z)
+export function contentsTop( x, z ) {
+
+	return surfaceY( x, z );
+
+}
+
+// p 0 → 1: the dough rises from the bottom of the bowl until it covers everything, while the
+// yolks and the butter get mixed in. turn: how far the mixer has spun (churns the dough's pattern)
+export function mixDough( p, turn = 0 ) {
+
+	if ( ! dough ) {
+
+		// high enough to cover the tallest thing in the bowl
+		const floor = bowl.rimY - bowl.radius;
+		let top = floor;
+		for ( let i = 0; i < 300; i ++ ) {
+
+			const a = Math.random() * Math.PI * 2;
+			const r = Math.sqrt( Math.random() ) * bowl.radius * 0.8;
+			top = Math.max( top, surfaceY( bowl.center.x + Math.cos( a ) * r, bowl.center.z + Math.sin( a ) * r ) );
+
+		}
+
+		for ( const s of solids ) {
+
+			top = Math.max( top, new THREE.Box3().setFromObject( s ).max.y );
+			s.userData.mixScale = s.scale.clone();
+
+		}
+
+		dough = new Layer( { x: bowl.center.x, z: bowl.center.z, radius: bowl.radius * 1.2, height: top - floor + 0.008, material: materials.dough, lumps: 0.15, clumps: 0.002, bottom: floor } );
+
+	}
+
+	const k = THREE.MathUtils.clamp( p, 0, 1 );
+	dough.setGrowth( ease( k ) );
+	swirl.value = turn;
+
+	for ( const s of solids ) {
+
+		const left = 1 - ease( THREE.MathUtils.clamp( ( k - 0.15 ) / 0.6, 0, 1 ) );
+		s.scale.copy( s.userData.mixScale ).multiplyScalar( Math.max( left, 0.001 ) );
+		s.visible = left > 0.01;
+
+	}
+
+	if ( k >= 1 ) {
+
+		// only the dough is left
+		for ( const layer of layers ) if ( layer !== dough ) layer.mesh.visible = false;
+		sugarGrains.clear();
+
+	}
 
 }
 
