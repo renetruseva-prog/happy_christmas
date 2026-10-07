@@ -6,6 +6,8 @@ const state = {
 	inBowl: [], // ingredients already in the bowl
 	total: 0, // how many ingredients the recipe needs
 	busy: false, // an ingredient is being poured/cracked/dropped into the bowl
+	mixing: false, // the player is holding the mixer over the bowl
+	mixed: false, // the ingredients have been mixed into dough
 };
 
 const listeners = new Set();

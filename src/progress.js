@@ -19,14 +19,29 @@ export function loadProgress() {
 
 }
 
+// whether the ingredients were already mixed into dough
+export function loadMixed() {
+
+	try {
+
+		return JSON.parse( localStorage.getItem( KEY ) )?.mixed === true;
+
+	} catch {
+
+		return false;
+
+	}
+
+}
+
 // save whenever the state changes
 export function trackProgress() {
 
-	subscribe( ( { inBowl } ) => {
+	subscribe( ( { inBowl, mixed } ) => {
 
 		try {
 
-			localStorage.setItem( KEY, JSON.stringify( { inBowl: inBowl.map( ( r ) => r.userData.id ) } ) );
+			localStorage.setItem( KEY, JSON.stringify( { inBowl: inBowl.map( ( r ) => r.userData.id ), mixed } ) );
 
 		} catch { /* storage unavailable: progress just won't persist */ }
 
