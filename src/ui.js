@@ -19,8 +19,18 @@ export function hideHint() {
 
 }
 
+// replace the progress box's text (e.g. the mixing percentage)
+export function showStatus( text ) {
+
+	statusEl.textContent = text;
+	statusEl.style.opacity = 1;
+
+}
+
 // the bowl progress box redraws whenever the state changes
-subscribe( ( { inBowl, total } ) => {
+subscribe( ( { inBowl, total, mixed, mixing } ) => {
+
+	if ( mixing ) return; // the mixer shows its own progress
 
 	if ( inBowl.length === 0 ) {
 
@@ -30,7 +40,9 @@ subscribe( ( { inBowl, total } ) => {
 	}
 
 	const names = inBowl.map( ( r ) => r.userData.ingredient ).join( ', ' );
-	statusEl.textContent = inBowl.length === total ? 'All ingredients are in the bowl! · press R to start over' : `Bowl ${ inBowl.length }/${ total } · ${ names }`;
+	if ( mixed ) statusEl.textContent = 'The dough is ready! · press R to start over';
+	else if ( inBowl.length === total ) statusEl.textContent = 'All ingredients are in the bowl! Grab the mixer · press R to start over';
+	else statusEl.textContent = `Bowl ${ inBowl.length }/${ total } · ${ names }`;
 	statusEl.style.opacity = 1;
 
 } );

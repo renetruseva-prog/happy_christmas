@@ -5,6 +5,7 @@ import { showHint, hideHint } from './ui.js';
 import { resetProgress } from './progress.js';
 import { isOverBowl } from './bowl.js';
 import { pickRoots, pickRootOf, pickUp, putBack, releaseHeld, updateHeld } from './ingredients.js';
+import { mixerHint, tryGrabMixer } from './mixer.js';
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2( 2, 2 );
@@ -63,7 +64,7 @@ function findInteractable( obj ) {
 
 function onClick() {
 
-	if ( getState().busy ) return;
+	if ( getState().busy || getState().mixing ) return; // (while mixing, the mouse button runs the mixer)
 	raycaster.setFromCamera( pointer, camera );
 
 	if ( getState().held ) {
@@ -72,6 +73,8 @@ function onClick() {
 		return;
 
 	}
+
+	if ( tryGrabMixer( raycaster ) ) return;
 
 	const hit = raycaster.intersectObjects( pickRoots.filter( ( r ) => r.visible ), true )[ 0 ];
 	const root = hit ? pickRootOf( hit.object ) : null;
@@ -84,6 +87,21 @@ function updateHover() {
 	if ( getState().busy ) {
 
 		hideHint();
+		return;
+
+	}
+
+	const mixerText = mixerHint( raycaster );
+	if ( mixerText === false ) {
+
+		hideHint();
+		return;
+
+	}
+
+	if ( mixerText ) {
+
+		showHint( mixerText.text, { clickable: mixerText.clickable } );
 		return;
 
 	}

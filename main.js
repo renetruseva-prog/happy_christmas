@@ -3,6 +3,7 @@ import { renderer, scene, camera, controls, constrainCamera, render } from './sr
 import { loadKitchen } from './src/kitchen.js';
 import { initIngredients } from './src/ingredients.js';
 import { initPouring, updatePouring } from './src/pouring.js';
+import { initMixer, updateMixer } from './src/mixer.js';
 import { initInteraction, updateInteraction } from './src/interaction.js';
 import { trackProgress } from './src/progress.js';
 import { updateLights } from './src/lights.js';
@@ -14,6 +15,7 @@ const world = await loadKitchen( scene, camera, controls );
 initPouring( world, scene, camera ); // before the ingredients: restoring saved progress uses it
 initIngredients( world );
 trackProgress();
+initMixer( { scene, room: world.room, camera, controls, canvas: renderer.domElement } ); // after the ingredients: it appears once they're all in
 initInteraction( { camera, canvas: renderer.domElement, interactables: world.interactables } );
 
 let lastTime = 0;
@@ -31,6 +33,7 @@ renderer.setAnimationLoop( ( time ) => {
 	updateTweens( dt );
 	updateSequences( dt );
 	updatePouring( dt );
+	updateMixer( dt );
 	render();
 
 } );

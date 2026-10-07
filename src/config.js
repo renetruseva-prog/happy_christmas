@@ -31,6 +31,11 @@ export const INGREDIENTS = {
 	Sugar_Jar: { label: 'Sugar', action: 'pour' },
 };
 
+// mixing: how far (in metres) the mixer has to go round the bowl while it's on to make the dough,
+// and how fast it has to keep going round (radians per second) before it counts at all
+export const MIX_DISTANCE = 1.6;
+export const MIN_SWIRL = 1.5;
+
 // a held ingredient floats this high above the floor and stays within these limits
 export const HOLD_HEIGHT = 1.15;
 export const HOLD_X = [ - 1.2, 1.2 ];
