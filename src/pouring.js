@@ -419,7 +419,6 @@ const POURS = {
 
 // ---------- setup ----------
 const containers = new Map(); // bag/jar → where its opening is, its lid and the sugar inside
-let butterHalfHeight = 0.025;
 
 function rootOf( name ) {
 
@@ -540,10 +539,6 @@ export function initPouring( world, sceneRef, cameraRef ) {
 		const wrapper = butter.getObjectByName( 'Butter_Wrapper' );
 		if ( wrapper ) kitchen.attach( wrapper );
 
-		// measure the butter on its own, without the wrapper under it
-		butter.geometry.computeBoundingBox();
-		butterHalfHeight = butter.geometry.boundingBox.getSize( new THREE.Vector3() ).y * butter.scale.y / 2;
-
 	}
 
 }
@@ -600,11 +595,9 @@ export function restoreInBowl( root ) {
 
 	} else if ( kind === 'Butter' ) {
 
-		const spot = freeSpot( 0.045, { ring: true } );
-		taken.push( { x: spot.x, z: spot.z, size: 0.045 } );
-		const outward = Math.atan2( spot.z - bowl.center.z, spot.x - bowl.center.x );
-		root.quaternion.setFromAxisAngle( UP, - outward - Math.PI / 2 ).multiply( root.userData.home.quaternion );
-		root.position.set( spot.x, surfaceY( spot.x, spot.z ) + butterHalfHeight, spot.z );
+		const rest = butterRest( root );
+		root.position.copy( rest.position );
+		root.quaternion.copy( rest.quaternion );
 
 	} else root.visible = false;
 
@@ -882,6 +875,36 @@ async function crackEgg( root ) {
 
 }
 
+// where the butter lies in the bowl: a free spot a little off the middle, its long side along the
+// bowl's wall, and high enough that no part of its underside sinks into the curved bowl (or
+// into what's already in it), so it rests across the bowl like a real block would
+function butterRest( root ) {
+
+	const spot = freeSpot( 0.03, { ring: true } );
+	taken.push( { x: spot.x, z: spot.z, size: 0.045 } );
+	const outward = Math.atan2( spot.z - bowl.center.z, spot.x - bowl.center.x );
+	const quaternion = new THREE.Quaternion().setFromAxisAngle( UP, - outward - Math.PI / 2 ).multiply( root.userData.home.quaternion );
+
+	// check a grid of points across the underside
+	root.geometry.computeBoundingBox();
+	const { min, max } = root.geometry.boundingBox;
+	const p = new THREE.Vector3();
+	let y = - Infinity;
+	for ( let i = 0; i <= 4; i ++ ) {
+
+		for ( let j = 0; j <= 4; j ++ ) {
+
+			p.set( THREE.MathUtils.lerp( min.x, max.x, i / 4 ), min.y, THREE.MathUtils.lerp( min.z, max.z, j / 4 ) ).multiply( root.scale ).applyQuaternion( quaternion );
+			y = Math.max( y, surfaceY( spot.x + p.x, spot.z + p.z ) - p.y );
+
+		}
+
+	}
+
+	return { position: new THREE.Vector3( spot.x, y + 0.001, spot.z ), quaternion };
+
+}
+
 // butter: drop it in, tumbling, and let it settle
 async function dropButter( root ) {
 
@@ -889,10 +912,9 @@ async function dropButter( root ) {
 	const start = root.position.clone();
 	const startQ = root.quaternion.clone();
 
-	// towards the side, wherever there's room, so it doesn't land on a yolk
-	const spot = freeSpot( 0.045, { ring: true } );
-	taken.push( { x: spot.x, z: spot.z, size: 0.045 } );
-	const above = new THREE.Vector3( spot.x, bowl.rimY + 0.12, spot.z );
+	// where it will lie (somewhere free, so it doesn't land on a yolk)
+	const rest = butterRest( root );
+	const above = new THREE.Vector3( rest.position.x, bowl.rimY + 0.12, rest.position.z );
 
 
 	await animate( 0.45, ( k ) => {
@@ -905,7 +927,7 @@ async function dropButter( root ) {
 	// fall, tumbling
 	const axis = new THREE.Vector3( Math.random() - 0.5, 0, Math.random() - 0.5 ).normalize();
 	const upright = root.quaternion.clone();
-	const restY = surfaceY( root.position.x, root.position.z ) + butterHalfHeight;
+	const restY = rest.position.y;
 	let angle = 0;
 	let vy = 0;
 	await until( ( dt ) => {
@@ -919,8 +941,7 @@ async function dropButter( root ) {
 	} );
 
 	// land flat with a little bounce, lying along the bowl's wall
-	const outward = Math.atan2( spot.z - bowl.center.z, spot.x - bowl.center.x );
-	const flat = new THREE.Quaternion().setFromAxisAngle( UP, - outward - Math.PI / 2 ).multiply( home.quaternion );
+	const flat = rest.quaternion;
 	const landQ = root.quaternion.clone();
 	await animate( 0.25, ( k ) => {
 
