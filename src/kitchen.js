@@ -1,7 +1,7 @@
 // loads the Blender kitchen and prepares its materials, lights and camera
 import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { LIGHT_SCALE, BAKE_BOOST } from './config.js';
+import { LIGHT_SCALE, BAKE_BOOST, PENDANT_LIGHT, PENDANT_BULB_GLOW } from './config.js';
 import { trackLight, trackBulb } from './lights.js';
 
 export async function loadKitchen( scene, camera, controls ) {
@@ -13,6 +13,7 @@ export async function loadKitchen( scene, camera, controls ) {
 	room.traverse( ( obj ) => {
 
 		if ( obj.isMesh && obj.name.startsWith( 'XLights_Bulbs' ) ) trackBulb( obj );
+		if ( obj.isMesh && obj.name === 'Pendant_Bulb' ) obj.material.emissiveIntensity *= PENDANT_BULB_GLOW;
 
 		if ( obj.isMesh && obj.userData.baked ) {
 
@@ -34,6 +35,7 @@ export async function loadKitchen( scene, camera, controls ) {
 		if ( obj.isLight ) {
 
 			obj.intensity *= LIGHT_SCALE;
+			if ( obj.name.startsWith( 'Light_Pendant' ) ) obj.intensity *= PENDANT_LIGHT;
 			if ( obj.name.startsWith( 'Light_Pendant' ) && obj.isSpotLight ) {
 
 				obj.castShadow = true;

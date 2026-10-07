@@ -30,7 +30,7 @@ subscribe( ( { inBowl, total } ) => {
 	}
 
 	const names = inBowl.map( ( r ) => r.userData.ingredient ).join( ', ' );
-	statusEl.textContent = inBowl.length === total ? 'All ingredients are in the bowl!' : `Bowl ${ inBowl.length }/${ total } · ${ names }`;
+	statusEl.textContent = inBowl.length === total ? 'All ingredients are in the bowl! · press R to start over' : `Bowl ${ inBowl.length }/${ total } · ${ names }`;
 	statusEl.style.opacity = 1;
 
 } );

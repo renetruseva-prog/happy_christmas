@@ -31,7 +31,9 @@ controls.update();
 // glow on the christmas lights, candles and oven
 const renderPipeline = new THREE.RenderPipeline( renderer );
 const scenePassColor = pass( scene, camera ).getTextureNode( 'output' );
-renderPipeline.outputNode = scenePassColor.add( bloom( scenePassColor, 0.35, 0.3, 0.9 ) );
+// (threshold 2: only things that give off light glow; lower and the lit white bowl glows too,
+// which washes out the colours of everything in it)
+renderPipeline.outputNode = scenePassColor.add( bloom( scenePassColor, 0.35, 0.3, 2 ) );
 
 addExtraLights( scene );
 

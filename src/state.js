@@ -5,6 +5,7 @@ const state = {
 	held: null, // the ingredient the player is carrying (a three.js object) or null
 	inBowl: [], // ingredients already in the bowl
 	total: 0, // how many ingredients the recipe needs
+	busy: false, // an ingredient is being poured/cracked/dropped into the bowl
 };
 
 const listeners = new Set();

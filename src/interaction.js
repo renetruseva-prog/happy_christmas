@@ -2,7 +2,9 @@
 import * as THREE from 'three/webgpu';
 import { getState, setState } from './state.js';
 import { showHint, hideHint } from './ui.js';
-import { pickRoots, pickRootOf, isOverBowl, pickUp, putBack, releaseHeld, updateHeld } from './ingredients.js';
+import { resetProgress } from './progress.js';
+import { isOverBowl } from './bowl.js';
+import { pickRoots, pickRootOf, pickUp, putBack, releaseHeld, updateHeld } from './ingredients.js';
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2( 2, 2 );
@@ -32,6 +34,8 @@ export function initInteraction( { camera: cam, canvas, interactables: list } ) 
 
 	window.addEventListener( 'keydown', ( e ) => {
 
+		if ( e.key === 'r' || e.key === 'R' ) resetProgress();
+
 		const { held } = getState();
 		if ( e.key === 'Escape' && held ) {
 
@@ -59,6 +63,7 @@ function findInteractable( obj ) {
 
 function onClick() {
 
+	if ( getState().busy ) return;
 	raycaster.setFromCamera( pointer, camera );
 
 	if ( getState().held ) {
@@ -68,13 +73,20 @@ function onClick() {
 
 	}
 
-	const hit = raycaster.intersectObjects( pickRoots, true )[ 0 ];
+	const hit = raycaster.intersectObjects( pickRoots.filter( ( r ) => r.visible ), true )[ 0 ];
 	const root = hit ? pickRootOf( hit.object ) : null;
 	if ( root ) pickUp( root );
 
 }
 
 function updateHover() {
+
+	if ( getState().busy ) {
+
+		hideHint();
+		return;
+
+	}
 
 	if ( getState().held ) {
 
@@ -85,11 +97,12 @@ function updateHover() {
 
 	}
 
-	const hit = raycaster.intersectObjects( [ ...interactables, ...pickRoots ], true )[ 0 ];
+	const hit = raycaster.intersectObjects( [ ...interactables, ...pickRoots.filter( ( r ) => r.visible ) ], true )[ 0 ];
 	const root = hit ? pickRootOf( hit.object ) : null;
 	const target = hit ? findInteractable( hit.object ) : null;
 
-	if ( root ) showHint( `${ root.userData.ingredient } · pick up` );
+	if ( root && getState().inBowl.includes( root ) ) showHint( `${ root.userData.ingredient } · already in the bowl`, { clickable: false } );
+	else if ( root ) showHint( `${ root.userData.ingredient } · pick up` );
 	else if ( target ) showHint( `${ target.name.replaceAll( '_', ' ' ) } · ${ target.userData.action.replaceAll( '_', ' ' ) }` );
 	else hideHint();
 
