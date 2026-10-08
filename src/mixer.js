@@ -5,7 +5,7 @@
 import * as THREE from 'three/webgpu';
 import { MIX_DISTANCE, MIN_SWIRL } from './config.js';
 import { getState, setState, subscribe } from './state.js';
-import { showStatus } from './ui.js';
+import { showStatus, showGuide, hideGuide, guideShown } from './ui.js';
 import { runSequence } from './sequence.js';
 import { loadMixed } from './progress.js';
 import { bowlInfo, contentsTop, mixDough } from './pouring.js';
@@ -45,10 +45,6 @@ const intro = document.getElementById( 'mix-intro' );
 const introNote = document.getElementById( 'mix-intro-note' );
 const useCameraButton = document.getElementById( 'use-camera' );
 const useMouseButton = document.getElementById( 'use-mouse' );
-const tutorial = document.getElementById( 'tutorial' );
-const tutorialIcon = document.getElementById( 'tutorial-icon' );
-const tutorialText = document.getElementById( 'tutorial-text' );
-const tutorialSmall = document.getElementById( 'tutorial-small' );
 let tutorialFrom = 0; // progress when the tutorial last showed: it hides once you've mixed a bit
 let stillFor = 0; // seconds without any mixing progress: the tutorial comes back
 let progress = 0;
@@ -265,7 +261,7 @@ async function putDown() {
 	holding = false;
 	running = mouseDown = false;
 	cameraButton.classList.remove( 'show' );
-	tutorial.classList.remove( 'show' );
+	hideGuide();
 	stopHandTracking();
 	cameraButton.textContent = 'Mix with your hand (C)';
 	const from = mixer.position.clone();
@@ -381,12 +377,14 @@ function chooseMouse() {
 function showTutorial() {
 
 	const withHand = isTracking();
-	tutorialIcon.firstChild.textContent = withHand ? '✋' : '🖱️';
-	tutorialText.textContent = withHand ? 'Move your hand in circles in front of the camera' : 'Hold the mouse button and move in circles over the bowl';
-	tutorialSmall.textContent = withHand ? 'Just showing your hand won\'t mix it, keep going round!' : 'Keep going round: holding still won\'t mix it';
+	showGuide( {
+		icon: withHand ? '✋' : '🖱️',
+		text: withHand ? 'Move your hand in circles in front of the camera' : 'Hold the mouse button and move in circles over the bowl',
+		small: withHand ? 'Just showing your hand won\'t mix it, keep going round!' : 'Keep going round: holding still won\'t mix it',
+		motion: 'circle',
+	} );
 	tutorialFrom = progress;
 	stillFor = 0;
-	tutorial.classList.add( 'show' );
 
 }
 
@@ -410,7 +408,7 @@ export function mixerHint( ray ) {
 
 	if ( ! mixer ) return null;
 	if ( intro.classList.contains( 'show' ) ) return false; // the "time to mix" card is up
-	if ( holding && tutorial.classList.contains( 'show' ) ) return false; // the tutorial already says it
+	if ( holding && guideShown() ) return false; // the tutorial already says it
 	if ( holding && isTracking() ) return { text: handPosition() ? 'keep moving your hand in circles' : 'show your hand to the camera · Esc to put the mixer down', clickable: false };
 	if ( holding ) return { text: running ? 'keep moving in circles' : 'hold the mouse button and move in circles · C to use your hand · Esc to put it down', clickable: false };
 	if ( getState().mixing ) return false; // on its way to or from the bowl
@@ -557,8 +555,8 @@ export function updateMixer( dt ) {
 
 	// the tutorial fades out once you've got the hang of it, and comes back if you stop
 	stillFor = gained > 0 ? 0 : stillFor + dt;
-	if ( progress - tutorialFrom > 0.12 ) tutorial.classList.remove( 'show' );
-	if ( stillFor > 3 && ! tutorial.classList.contains( 'show' ) ) showTutorial();
+	if ( progress - tutorialFrom > 0.12 ) hideGuide();
+	if ( stillFor > 3 && ! guideShown() ) showTutorial();
 
 	mixDough( progress, turned * 0.02 );
 	showStatus( `Mixing the dough · ${ Math.round( progress * 100 ) }%` );

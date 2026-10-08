@@ -27,6 +27,43 @@ export function showStatus( text ) {
 
 }
 
+// ---------- the little tutorial: an icon showing the movement, and what to do ----------
+const guide = document.getElementById( 'tutorial' );
+const guideIcon = document.getElementById( 'tutorial-icon' );
+const guideMotion = document.getElementById( 'tutorial-motion' );
+const guideText = document.getElementById( 'tutorial-text' );
+const guideSmall = document.getElementById( 'tutorial-small' );
+const MOTIONS = {
+	circle: { show: 'tutorial-circle', path: 'M32,10 a22,22 0 1,1 -0.01,0', dur: '1.6s' }, // going round (mixing)
+	line: { show: 'tutorial-line', path: 'M32,12 L32,52 Z', dur: '1.4s' }, // forward and back (rolling)
+};
+
+// motion: 'circle' or 'line'
+export function showGuide( { icon, text, small = '', motion = 'circle' } ) {
+
+	const m = MOTIONS[ motion ];
+	for ( const [ name, other ] of Object.entries( MOTIONS ) ) document.getElementById( other.show ).style.display = name === motion ? '' : 'none';
+	guideMotion.setAttribute( 'path', m.path );
+	guideMotion.setAttribute( 'dur', m.dur );
+	guideIcon.firstChild.textContent = icon;
+	guideText.textContent = text;
+	guideSmall.textContent = small;
+	guide.classList.add( 'show' );
+
+}
+
+export function hideGuide() {
+
+	guide.classList.remove( 'show' );
+
+}
+
+export function guideShown() {
+
+	return guide.classList.contains( 'show' );
+
+}
+
 // the bowl progress box redraws whenever the state changes
 subscribe( ( { inBowl, total, mixed, mixing } ) => {
 
