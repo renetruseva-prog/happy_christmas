@@ -2,9 +2,9 @@
 import { renderer, scene, camera, controls, constrainCamera, render } from './src/stage.js';
 import { loadKitchen } from './src/kitchen.js';
 import { initIngredients } from './src/ingredients.js';
-import { initPouring, updatePouring } from './src/pouring.js';
-import { initMixer, updateMixer } from './src/mixer.js';
-import { initRolling, updateRolling } from './src/rolling.js';
+import { initBowl, updateBowl } from './src/bowl/index.js';
+import { initMixer, updateMixer } from './src/mixer/index.js';
+import { initRolling, updateRolling } from './src/rolling/index.js';
 import { initInteraction, updateInteraction } from './src/interaction.js';
 import { trackProgress } from './src/progress.js';
 import { updateLights } from './src/lights.js';
@@ -13,7 +13,7 @@ import { updateSequences } from './src/sequence.js';
 import './src/ui.js';
 
 const world = await loadKitchen( scene, camera, controls );
-initPouring( world, scene, camera ); // before the ingredients: restoring saved progress uses it
+initBowl( world, scene, camera ); // before the ingredients: restoring saved progress uses it
 initIngredients( world );
 trackProgress();
 initMixer( { scene, room: world.room, camera, controls, canvas: renderer.domElement } ); // after the ingredients: it appears once they're all in
@@ -34,7 +34,7 @@ renderer.setAnimationLoop( ( time ) => {
 	updateInteraction( dt );
 	updateTweens( dt );
 	updateSequences( dt );
-	updatePouring( dt );
+	updateBowl( dt );
 	updateMixer( dt );
 	updateRolling( dt );
 	render();

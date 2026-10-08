@@ -43,12 +43,3 @@ export const ROLL_DISTANCE = 1.4;
 export const HOLD_HEIGHT = 1.15;
 export const HOLD_X = [ - 1.2, 1.2 ];
 export const HOLD_Z = [ - 0.9, 0.6 ];
-
-// ingredients in the bowl are shown at this fraction of their size
-export const BOWL_ITEM_SCALE = 0.4;
-
-// pouring: the container hovers this far to the side of the bowl, tips by this angle
-// (radians) toward it and pours for this many seconds
-export const POUR_OFFSET = 0.2;
-export const POUR_TILT = 1.9;
-export const POUR_SECONDS = 1.6;

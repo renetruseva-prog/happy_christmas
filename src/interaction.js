@@ -3,10 +3,10 @@ import * as THREE from 'three/webgpu';
 import { getState, setState } from './state.js';
 import { showHint, hideHint } from './ui.js';
 import { resetProgress } from './progress.js';
-import { isOverBowl } from './bowl.js';
+import { isOverBowl } from './bowl/index.js';
 import { pickRoots, pickRootOf, pickUp, putBack, releaseHeld, updateHeld } from './ingredients.js';
-import { mixerHint, tryGrabMixer } from './mixer.js';
-import { rollingHint, tryRollingClick } from './rolling.js';
+import { mixerHint, tryGrabMixer } from './mixer/index.js';
+import { rollingHint, tryRollingClick } from './rolling/index.js';
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2( 2, 2 );
