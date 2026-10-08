@@ -39,16 +39,20 @@ export const MIN_SWIRL = 1.5;
 // rolling: how far (in metres) the rolling pin has to roll back and forth over the dough to make it thin
 export const ROLL_DISTANCE = 1.4;
 
+// cutting: how many cookies to cut out of the dough. The star cutters shrink to this size when
+// picked up (they're big in the kitchen model), and a drawn shape can reach this far from its
+// middle, so all of them fit on the rolled-out sheet
+export const COOKIE_COUNT = 6;
+export const CUTTER_SCALE = 0.5;
+export const MAX_SHAPE_RADIUS = 0.036;
+
+// baking: seconds in the oven. Around 20 they're underbaked, 40 is perfect and by 60 they're burnt;
+// taken out before UNDERBAKED_UNTIL they count as underbaked, from BURNT_FROM as burnt
+export const BAKE_PERFECT = 40;
+export const UNDERBAKED_UNTIL = 30;
+export const BURNT_FROM = 50;
+
 // a held ingredient floats this high above the floor and stays within these limits
 export const HOLD_HEIGHT = 1.15;
 export const HOLD_X = [ - 1.2, 1.2 ];
 export const HOLD_Z = [ - 0.9, 0.6 ];
-
-// ingredients in the bowl are shown at this fraction of their size
-export const BOWL_ITEM_SCALE = 0.4;
-
-// pouring: the container hovers this far to the side of the bowl, tips by this angle
-// (radians) toward it and pours for this many seconds
-export const POUR_OFFSET = 0.2;
-export const POUR_TILT = 1.9;
-export const POUR_SECONDS = 1.6;

@@ -3,10 +3,12 @@ import * as THREE from 'three/webgpu';
 import { getState, setState } from './state.js';
 import { showHint, hideHint } from './ui.js';
 import { resetProgress } from './progress.js';
-import { isOverBowl } from './bowl.js';
+import { isOverBowl } from './bowl/index.js';
 import { pickRoots, pickRootOf, pickUp, putBack, releaseHeld, updateHeld } from './ingredients.js';
-import { mixerHint, tryGrabMixer } from './mixer.js';
-import { rollingHint, tryRollingClick } from './rolling.js';
+import { mixerHint, tryGrabMixer } from './mixer/index.js';
+import { rollingHint, tryRollingClick } from './rolling/index.js';
+import { cuttingHint, tryCuttingClick } from './cutting/index.js';
+import { bakingHint, tryBakingClick } from './baking/index.js';
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2( 2, 2 );
@@ -76,6 +78,8 @@ function onClick() {
 
 	}
 
+	if ( tryBakingClick( raycaster ) ) return;
+	if ( tryCuttingClick( raycaster ) ) return;
 	if ( tryRollingClick( raycaster ) ) return;
 	if ( tryGrabMixer( raycaster ) ) return;
 
@@ -90,6 +94,36 @@ function updateHover() {
 	if ( getState().busy ) {
 
 		hideHint();
+		return;
+
+	}
+
+	const bakingText = bakingHint( raycaster );
+	if ( bakingText === false ) {
+
+		hideHint();
+		return;
+
+	}
+
+	if ( bakingText ) {
+
+		showHint( bakingText.text, { clickable: bakingText.clickable } );
+		return;
+
+	}
+
+	const cuttingText = cuttingHint( raycaster );
+	if ( cuttingText === false ) {
+
+		hideHint();
+		return;
+
+	}
+
+	if ( cuttingText ) {
+
+		showHint( cuttingText.text, { clickable: cuttingText.clickable } );
 		return;
 
 	}

@@ -4,8 +4,7 @@ import { INGREDIENTS, HOLD_HEIGHT, HOLD_X, HOLD_Z } from './config.js';
 import { getState, setState } from './state.js';
 import { tweenTo, cancelTween } from './tween.js';
 import { loadProgress } from './progress.js';
-import { initBowl, isOverBowl } from './bowl.js';
-import { addToBowl, restoreInBowl } from './pouring.js';
+import { isOverBowl, addToBowl, restoreInBowl } from './bowl/index.js';
 
 let kitchen = null;
 let interactables = null;
@@ -18,7 +17,6 @@ export function initIngredients( world ) {
 
 	kitchen = world.room;
 	interactables = world.interactables;
-	initBowl( world.room, world.bowl );
 
 	for ( const [ name, { label, action } ] of Object.entries( INGREDIENTS ) ) {
 
@@ -93,7 +91,7 @@ export function putBack( root ) {
 
 export function dropInBowl( root ) {
 
-	// it can't be clicked any more; pour/crack/drop it in (see pouring.js), and only count it
+	// it can't be clicked any more; pour/crack/drop it in (see bowl/), and only count it
 	// as in the bowl once that's finished. Clicks wait while it plays (busy).
 	removeInteractable( root );
 	setState( { busy: true } );
