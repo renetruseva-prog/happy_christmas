@@ -6,7 +6,7 @@ import { color, float, mix, mx_noise_float, positionWorld, smoothstep, uniform, 
 import { ease } from '../sequence.js';
 
 const BALL = { radius: 0.055, thickness: 0.05 }; // fresh out of the bowl
-const SHEET_THICKNESS = 0.007; // rolled out (about 7 mm, like real cookie dough)
+export const SHEET_THICKNESS = 0.007; // rolled out (about 7 mm, like real cookie dough)
 const STRETCH = 0.15; // rolling stretches it a bit more in the direction it's rolled
 
 // how much flour is dusted (0..1), for fading it in
@@ -31,12 +31,20 @@ function slabGeometry() {
 
 }
 
-export function makeDough() {
+// what dough looks like (also the cookies cut out of it): mottled, in the world's coordinates so
+// the pieces match up
+export function doughMaterial( options = {} ) {
 
-	const material = new THREE.MeshStandardNodeMaterial( { roughness: 0.8 } );
+	const material = new THREE.MeshStandardNodeMaterial( { roughness: 0.8, ...options } );
 	const mottle = mx_noise_float( positionWorld.mul( 60 ) ).mul( 0.5 ).add( 0.5 );
 	material.colorNode = mix( color( 0xc8975a ), color( 0xebd2a2 ), mottle ).mul( mx_noise_float( positionWorld.mul( 300 ) ).mul( 0.06 ).add( 0.97 ) );
-	const mesh = new THREE.Mesh( slabGeometry(), material );
+	return material;
+
+}
+
+export function makeDough() {
+
+	const mesh = new THREE.Mesh( slabGeometry(), doughMaterial() );
 	mesh.name = 'Rolled_Dough';
 	mesh.castShadow = mesh.receiveShadow = true;
 	mesh.visible = false;

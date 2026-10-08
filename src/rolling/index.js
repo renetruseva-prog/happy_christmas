@@ -227,6 +227,13 @@ export function tryRollingClick( ray ) {
 
 }
 
+// the dough on the table (for cutting cookies out of it)
+export function rolledDough() {
+
+	return dough;
+
+}
+
 // ---------- setup and every frame ----------
 export function initRolling( { room: kitchen, camera: cam, controls, canvas } ) {
 
