@@ -150,13 +150,19 @@ export function clock( seconds ) {
 
 }
 
-// seconds: how long they've been in; null hides it
-export function showOvenTimer( seconds ) {
+const ovenLabel = document.getElementById( 'oven-label' );
+
+// seconds: how long they've been in (null hides it); temperature: what the oven's set to;
+// smoke: how smoky it is (0..1): the clock gets hard to read; alarm: the smoke alarm is going
+export function showOvenTimer( seconds, { temperature = 180, smoke = 0, alarm = false } = {} ) {
 
 	ovenTimer.classList.toggle( 'show', seconds !== null );
 	if ( seconds === null ) return;
 	ovenTime.textContent = clock( seconds );
-	ovenTimer.classList.toggle( 'late', seconds > BAKE_PERFECT + 10 );
+	ovenTime.style.filter = smoke > 0.05 ? `blur(${ ( smoke * 7 ).toFixed( 1 ) }px)` : '';
+	ovenLabel.textContent = alarm ? '🚨 Smoke alarm! Wave the smoke away' : `🔥 In the oven · ${ temperature }°`;
+	ovenTimer.classList.toggle( 'alarm', alarm );
+	ovenTimer.classList.toggle( 'late', ! alarm && smoke > 0.05 );
 
 }
 
@@ -171,13 +177,15 @@ document.getElementById( 'bake-again' ).addEventListener( 'click', () => {
 document.getElementById( 'bake-over' ).addEventListener( 'click', () => resetProgress() );
 
 // { result, seconds }; again(): bake another batch
-export function showBakeResult( { result: kind, seconds }, again ) {
+export function showBakeResult( { result: kind, seconds, real, temperature }, again ) {
 
 	const r = RESULTS[ kind ];
 	document.getElementById( 'bake-result-badge' ).textContent = r.badge;
 	document.getElementById( 'bake-result-title' ).textContent = r.title;
 	document.getElementById( 'bake-result-text' ).textContent = r.text;
-	document.getElementById( 'bake-result-seconds' ).textContent = `In the oven for ${ Math.round( seconds ) } seconds · perfect is about ${ BAKE_PERFECT }`;
+	document.getElementById( 'bake-result-seconds' ).textContent = temperature === 180 || ! temperature
+		? `In the oven for ${ Math.round( seconds ) } seconds at 180° · perfect is about ${ BAKE_PERFECT }`
+		: `In the oven for ${ Math.round( real ) } seconds at ${ temperature }°, like ${ Math.round( seconds ) } at 180° · perfect is about ${ BAKE_PERFECT } at 180°`;
 	onAgain = again;
 	result.classList.add( 'show' );
 	document.getElementById( 'bake-again' ).focus();

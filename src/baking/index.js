@@ -4,7 +4,13 @@
 // to them to take the cookies out in time (click the oven): around 20 seconds they're
 // underbaked, 40 is perfect, and by 60 they're burnt (smoke starts coming out before that). How
 // they turned out shows on the cookies and on a card, which also offers to bake a new batch.
-//   oven.js  the door, the glow and the clock    tray.js  the baking tray    smoke.js  smoke
+// The oven's knob sets the heat: hotter bakes faster (and the fire burns higher), cooler slower;
+// the times above are at 180°. When they burn, smoke pours out and the smoke alarm goes off, and
+// the clock is hard to read through the smoke: wave the mouse over it to clear it.
+//   oven.js  the door, the glow and the clock    tray.js  the baking tray    knob.js  the knob
+//   alarm.js  the smoke alarm
+//   flames.js and smoke.js  the fire in the oven and the smoke when they burn (Shadertoy shaders,
+//   ported in shaders/)
 import * as THREE from 'three/webgpu';
 import { BAKE_PERFECT, UNDERBAKED_UNTIL, BURNT_FROM } from '../config.js';
 import { getState, setState, subscribe } from '../state.js';
@@ -14,7 +20,10 @@ import { loadBaking } from '../progress.js';
 import { cuts, bakeLevel } from '../cutting/cuts.js';
 import { initOven, ovenParts, openDoor, setHeat, showOnDisplay } from './oven.js';
 import { findTray, slotPosition, placeTray, moveTray } from './tray.js';
-import { initSmoke, updateSmoke } from './smoke.js';
+import { initSmoke, updateSmoke, smokeLevel, overSmoke, puffSmoke } from './smoke.js';
+import { initFlames, updateFlames, flareLevel } from './flames.js';
+import { initKnob, hitsKnob, turnKnob, setTemperature, shownTemperature, heatLevel, bakeSpeed, NORMAL } from './knob.js';
+import { setAlarm } from './alarm.js';
 
 const UP = new THREE.Vector3( 0, 1, 0 );
 const CARRY_HEIGHT = 1.0; // a dragged cookie floats this high, over the counters
@@ -40,7 +49,11 @@ let dragging = null; // what's being dragged: { cookie, index } or { tray: true 
 let overTarget = false; // and it's where it can be dropped right now (a cookie on the tray, the tray on the oven)
 let guided = false;
 const trayAt = new THREE.Vector3(); // where a dragged tray is going
-let lastShown = - 1; // the second the oven clock last showed
+let shown = ''; // what the oven's display shows now
+let bakedFor = 0; // how long they've baked, in seconds as if at 180° (the knob makes it go faster or slower)
+let saveIn = 0; // seconds until that's saved again
+let knobShownFor = 0; // the display shows the temperature for a moment after the knob's turned
+const SMOKE_ALARM = 0.3; // the alarm goes off when the smoke's this thick
 
 const pointer = new THREE.Vector2( 2, 2 );
 const raycaster = new THREE.Raycaster();
@@ -49,7 +62,8 @@ const trayPlane = new THREE.Plane( UP, - TRAY_HEIGHT );
 const carryAt = new THREE.Vector3();
 
 // ---------- helpers ----------
-function seconds() {
+// how long they've been in, on the clock
+function realSeconds() {
 
 	const { bakeStart } = getState();
 	return bakeStart === null ? 0 : ( Date.now() - bakeStart ) / 1000;
@@ -125,11 +139,21 @@ function flyCookie( cookie, to, duration = 0.5 ) {
 // listener (capture), so the view doesn't turn while dragging
 function onPointerDown( e ) {
 
-	if ( e.button !== 0 || e.target !== controls.domElement ) return;
-	const { cut, baking, baked, busy } = getState();
-	if ( ! cut || baking || baked || busy || dragging ) return;
-
+	if ( e.button !== 0 || e.target !== controls.domElement || dragging ) return;
 	setPointer( e );
+
+	// the oven's knob can be turned any time
+	if ( hitsKnob( raycaster ) ) {
+
+		dragging = { knob: true, x: e.clientX, y: e.clientY };
+		controls.enabled = false;
+		return;
+
+	}
+
+	const { cut, baking, baked, busy } = getState();
+	if ( ! cut || baking || baked || busy ) return;
+
 	if ( trayReady() ) {
 
 		if ( ! hitsTray( raycaster ) ) return;
@@ -156,6 +180,16 @@ function setPointer( e ) {
 	pointer.set( ( e.clientX / window.innerWidth ) * 2 - 1, - ( e.clientY / window.innerHeight ) * 2 + 1 );
 	raycaster.setFromCamera( pointer, camera );
 
+	// turning the knob: right or up is hotter
+	if ( dragging?.knob ) {
+
+		turnKnob( e.clientX - dragging.x, e.clientY - dragging.y );
+		dragging.x = e.clientX;
+		dragging.y = e.clientY;
+		knobShownFor = 1.5;
+
+	}
+
 }
 
 // let go
@@ -164,7 +198,8 @@ function drop() {
 	const dropped = dragging;
 	dragging = null;
 	controls.enabled = true;
-	if ( dropped.tray ) dropTray();
+	if ( dropped.knob ) setState( { temperature: shownTemperature() } ); // (saved)
+	else if ( dropped.tray ) dropTray();
 	else dropCookie( dropped );
 
 }
@@ -219,29 +254,29 @@ async function putInOven() {
 	await moveTray( tray, OVEN_FRONT, { duration: 0.5 } );
 	await moveTray( tray, OVEN_INSIDE, { duration: 0.6 } );
 	await openDoor( false );
-	setState( { busy: false, baking: true, bakeStart: Date.now(), baked: null } );
+	bakedFor = 0;
+	setState( { busy: false, baking: true, bakeStart: Date.now(), bakeProgress: { seconds: 0, at: Date.now() }, baked: null } );
 	guideBaking();
 
 }
 
 async function takeOut() {
 
-	const s = seconds();
-	const baked = { result: resultFor( s ), seconds: Math.round( s * 10 ) / 10 };
-	bakeLevel.value = s / BAKE_PERFECT;
+	const result = { result: resultFor( bakedFor ), seconds: Math.round( bakedFor * 10 ) / 10, real: Math.round( realSeconds() ), temperature: shownTemperature() };
+	bakeLevel.value = bakedFor / BAKE_PERFECT;
 	setState( { baking: false, busy: true } );
 	showOvenTimer( null );
 	hideGuide();
-	setHeat( 0 );
-	showOnDisplay( clock( s ) );
 
-	await openDoor( true );
+	// (opening the door lets out a puff of smoke if it's smoky in there)
+	const door = openDoor( true );
+	if ( smokeLevel() > 0.1 ) puffSmoke( 0.4 );
+	await door;
 	await moveTray( tray, OVEN_FRONT, { duration: 0.6 } );
 	await moveTray( tray, tray.centre, { duration: 0.9, lift: 0.15 } );
 	await openDoor( false );
-	showOnDisplay( '180°' );
-	setState( { busy: false, baked } );
-	showBakeResult( baked, bakeAgain );
+	setState( { busy: false, baked: result } );
+	showBakeResult( result, bakeAgain );
 
 }
 
@@ -249,7 +284,7 @@ async function takeOut() {
 function bakeAgain() {
 
 	bakeLevel.value = 0;
-	setState( { baked: null, bakeStart: null } );
+	setState( { baked: null, bakeStart: null, bakeProgress: null } );
 	guideTray();
 
 }
@@ -271,8 +306,8 @@ function guideTray() {
 
 function guideBaking() {
 
-	showGuide( { icon: '⏱️', text: 'Keep an eye on the clock!', small: `Click the oven to take the cookies out. About ${ BAKE_PERFECT } seconds makes them perfect`, motion: 'circle' } );
-	setTimeout( () => { if ( getState().baking ) hideGuide(); }, 7000 );
+	showGuide( { icon: '⏱️', text: 'Keep an eye on the clock!', small: `About ${ BAKE_PERFECT } seconds at ${ NORMAL }° makes them perfect: turn the knob for hotter (faster) or cooler (slower). Click the oven to take them out`, motion: 'circle' } );
+	setTimeout( () => { if ( getState().baking ) hideGuide(); }, 9000 );
 
 }
 
@@ -284,8 +319,11 @@ export function bakingHint( ray ) {
 	const { cut, baking, baked, busy, onTray, mixing, rolling } = getState();
 	if ( mixing || rolling ) return null;
 
+	if ( dragging?.knob ) return { text: `${ shownTemperature() }° · hotter bakes faster, cooler slower`, clickable: false };
 	if ( dragging?.tray ) return { text: overTarget ? 'let go to put the tray in the oven' : 'drag the tray into the oven', clickable: false };
-	if ( dragging ) return { text: overTarget ? 'let go to put it on the baking tray' : 'drag it onto the baking tray', clickable: false };
+	if ( hitsKnob( ray ) ) return { text: `Oven Knob · drag to set the heat (${ shownTemperature() }°) · hotter bakes faster`, clickable: true };
+	if ( overSmoke() ) return { text: 'Smoke · wave the mouse over it to clear it', clickable: false };
+	if ( dragging?.cookie ) return { text: overTarget ? 'let go to put it on the baking tray' : 'drag it onto the baking tray', clickable: false };
 
 	const loose = looseCookies();
 	const hit = ray.intersectObjects( [ ...ovenParts, tray.mesh, ...loose ], true )[ 0 ];
@@ -335,6 +373,8 @@ export function initBaking( { room, camera: cam, controls: ctrl } ) {
 	tray = findTray( room );
 	if ( ! tray ) return;
 	initOven( room );
+	initKnob( room );
+	initFlames( room );
 	initSmoke( room );
 
 	window.addEventListener( 'pointerdown', onPointerDown, { capture: true } );
@@ -345,6 +385,8 @@ export function initBaking( { room, camera: cam, controls: ctrl } ) {
 	// how far it got before a page refresh
 	const { cut } = getState();
 	const saved = loadBaking();
+	setTemperature( saved.temperature ?? NORMAL );
+	setState( { temperature: shownTemperature() } );
 	if ( cut ) {
 
 		const onTray = saved.onTray.filter( ( i, n, all ) => i < cuts.length && all.indexOf( i ) === n );
@@ -364,8 +406,11 @@ export function initBaking( { room, camera: cam, controls: ctrl } ) {
 
 		} else if ( full && saved.bakeStart !== null ) {
 
-			placeTray( tray, OVEN_INSIDE ); // still in the oven: the clock kept going
-			setState( { onTray, baking: true, bakeStart: saved.bakeStart } );
+			// still in the oven: it kept baking while the page was away
+			placeTray( tray, OVEN_INSIDE );
+			const { seconds = 0, at = saved.bakeStart } = saved.bakeProgress ?? {};
+			bakedFor = seconds + ( Date.now() - at ) / 1000 * bakeSpeed();
+			setState( { onTray, baking: true, bakeStart: saved.bakeStart, bakeProgress: { seconds: bakedFor, at: Date.now() } } );
 
 		} else {
 
@@ -408,7 +453,7 @@ export function updateBaking( dt ) {
 		}
 
 	// a dragged cookie follows the mouse, floating over the counters
-	} else if ( dragging ) {
+	} else if ( dragging?.cookie ) {
 
 		raycaster.setFromCamera( pointer, camera );
 		overTarget = hitsTray( raycaster );
@@ -422,24 +467,51 @@ export function updateBaking( dt ) {
 
 	}
 
-	// in the oven: the clock runs, the oven glows, and smoke comes out when they start to burn
+	// in the oven: they bake faster the hotter it is (saved now and then, for a refresh)
 	const { baking } = getState();
-	const s = baking ? seconds() : 0;
 	if ( baking ) {
 
-		bakeLevel.value = s / BAKE_PERFECT;
-		showOvenTimer( s );
-		setHeat( 1, performance.now() / 1000 );
-		if ( Math.floor( s ) !== lastShown ) {
+		bakedFor += dt * bakeSpeed();
+		bakeLevel.value = bakedFor / BAKE_PERFECT;
+		saveIn -= dt;
+		if ( saveIn <= 0 ) {
 
-			lastShown = Math.floor( s );
-			showOnDisplay( clock( s ), { warn: s >= BURNT_FROM } );
+			saveIn = 1;
+			setState( { bakeProgress: { seconds: bakedFor, at: Date.now() } } );
 
 		}
 
 	}
 
+	const s = baking ? bakedFor : 0;
+
+	// the oven's display: the temperature for a moment after the knob's turned (and whenever
+	// it's not baking), otherwise the clock
+	knobShownFor -= dt;
+	const showKnob = dragging?.knob || knobShownFor > 0 || ! baking;
+	const text = showKnob ? `${ shownTemperature() }°` : clock( realSeconds() );
+	const warn = ! showKnob && s >= BURNT_FROM;
+	if ( text + warn !== shown ) {
+
+		shown = text + warn;
+		showOnDisplay( text, { warn } );
+
+	}
+
+	// the fire: higher the hotter the oven's set, flaring when the door opens; it follows the
+	// mouse while that's over the oven
+	raycaster.setFromCamera( pointer, camera );
+	const overOven = ! dragging && hitsOven( raycaster );
+	updateFlames( dt, { target: baking ? 0.45 + 0.55 * heatLevel() + 0.1 * Math.min( 1, s / ( BURNT_FROM + 10 ) ) : 0, ray: raycaster.ray, overOven } );
+	setHeat( ( baking ? 0.6 + 0.6 * heatLevel() : 0 ) + flareLevel(), performance.now() / 1000 );
+
+	// smoke (a Shadertoy shader too, see shaders/smoke.js): from 45 seconds, when they start to
+	// burn, thicker and darker until they're black; it clears once they're out, or for a while
+	// when it's waved away. Thick smoke sets off the alarm and hides the clock
 	const smoking = baking ? THREE.MathUtils.clamp( ( s - ( BURNT_FROM - 5 ) ) / 15, 0, 1 ) : 0;
-	updateSmoke( dt, smoking * 14, THREE.MathUtils.clamp( ( s - BURNT_FROM ) / 10, 0, 1 ) );
+	updateSmoke( dt, { target: smoking, darkness: THREE.MathUtils.clamp( ( s - BURNT_FROM ) / 10, 0, 1 ), ray: raycaster.ray, camera } );
+	const smoke = smokeLevel();
+	setAlarm( smoke > SMOKE_ALARM );
+	if ( baking ) showOvenTimer( realSeconds(), { temperature: shownTemperature(), smoke, alarm: smoke > SMOKE_ALARM } );
 
 }

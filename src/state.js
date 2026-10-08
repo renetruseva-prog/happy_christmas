@@ -18,7 +18,9 @@ const state = {
 	onTray: [], // which cookies (their number in `cookies`) are on the baking tray, in order
 	baking: false, // the cookies are in the oven
 	bakeStart: null, // when they went in (Date.now(), so a refresh doesn't stop the clock)
-	baked: null, // once they're out: { result: 'under' | 'perfect' | 'burnt', seconds }
+	bakeProgress: null, // how baked they are: { seconds (as if at the normal temperature), at (Date.now() then) }
+	temperature: 180, // what the oven's knob is set to
+	baked: null, // once they're out: { result: 'under' | 'perfect' | 'burnt', seconds, real, temperature }
 };
 
 const listeners = new Set();
