@@ -7,6 +7,7 @@ import { isOverBowl } from './bowl/index.js';
 import { pickRoots, pickRootOf, pickUp, putBack, releaseHeld, updateHeld } from './ingredients.js';
 import { mixerHint, tryGrabMixer } from './mixer/index.js';
 import { rollingHint, tryRollingClick } from './rolling/index.js';
+import { cuttingHint, tryCuttingClick } from './cutting/index.js';
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2( 2, 2 );
@@ -76,6 +77,7 @@ function onClick() {
 
 	}
 
+	if ( tryCuttingClick( raycaster ) ) return;
 	if ( tryRollingClick( raycaster ) ) return;
 	if ( tryGrabMixer( raycaster ) ) return;
 
@@ -90,6 +92,21 @@ function updateHover() {
 	if ( getState().busy ) {
 
 		hideHint();
+		return;
+
+	}
+
+	const cuttingText = cuttingHint( raycaster );
+	if ( cuttingText === false ) {
+
+		hideHint();
+		return;
+
+	}
+
+	if ( cuttingText ) {
+
+		showHint( cuttingText.text, { clickable: cuttingText.clickable } );
 		return;
 
 	}

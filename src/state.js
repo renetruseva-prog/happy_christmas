@@ -12,6 +12,9 @@ const state = {
 	doughOut: false, // the dough has been taken out of the bowl onto the table
 	rolling: false, // the player is rolling the dough with the rolling pin
 	rolled: false, // the dough has been rolled out thin
+	cutting: false, // the player is holding a cookie cutter or drawing a shape on the dough
+	cookies: [], // the cookies cut out of the dough so far, as saved (see cutting/cuts.js)
+	cut: false, // all the cookies are cut out
 };
 
 const listeners = new Set();

@@ -39,6 +39,13 @@ export const MIN_SWIRL = 1.5;
 // rolling: how far (in metres) the rolling pin has to roll back and forth over the dough to make it thin
 export const ROLL_DISTANCE = 1.4;
 
+// cutting: how many cookies to cut out of the dough. The star cutters shrink to this size when
+// picked up (they're big in the kitchen model), and a drawn shape can reach this far from its
+// middle, so all of them fit on the rolled-out sheet
+export const COOKIE_COUNT = 6;
+export const CUTTER_SCALE = 0.5;
+export const MAX_SHAPE_RADIUS = 0.036;
+
 // a held ingredient floats this high above the floor and stays within these limits
 export const HOLD_HEIGHT = 1.15;
 export const HOLD_X = [ - 1.2, 1.2 ];

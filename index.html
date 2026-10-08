@@ -37,35 +37,52 @@
       }
       #camera.on { opacity: 1; }
 
-      /* "time to mix": asks to use the camera (or the mouse) once all the ingredients are in */
-      #mix-intro {
+      /* the cards in the middle of the screen: "time to mix" (camera or mouse?) and "all cookies cut" */
+      .overlay {
         position: fixed; inset: 0; display: grid; place-items: center;
         background: rgba(8, 5, 3, 0.55); backdrop-filter: blur(3px);
         opacity: 0; pointer-events: none; transition: opacity 0.3s;
       }
-      #mix-intro.show { opacity: 1; pointer-events: auto; }
-      #mix-intro .card {
+      .overlay.show { opacity: 1; pointer-events: auto; }
+      .overlay .card {
         width: min(420px, calc(100vw - 32px)); box-sizing: border-box; padding: 28px 28px 22px;
         border-radius: 20px; background: #2a1a12; color: #ffe8c8; text-align: center;
         font: 400 15px/1.45 system-ui, sans-serif; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
         transform: translateY(12px) scale(0.97); transition: transform 0.3s;
       }
-      #mix-intro.show .card { transform: none; }
-      #mix-intro .badge { font-size: 40px; line-height: 1; }
-      #mix-intro h2 { margin: 10px 0 6px; font-size: 22px; color: #fff3e6; }
-      #mix-intro p { margin: 0 0 10px; }
+      .overlay.show .card { transform: none; }
+      .overlay .badge { font-size: 40px; line-height: 1; }
+      .overlay h2 { margin: 10px 0 6px; font-size: 22px; color: #fff3e6; }
+      .overlay p { margin: 0 0 10px; }
       #mix-intro .privacy { font-size: 13px; color: #d9bfa0; }
-      #mix-intro .buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
-      #mix-intro button {
+      .overlay .buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+      .overlay button {
         padding: 12px 18px; border-radius: 999px; border: 0; cursor: pointer;
         font: 600 15px/1.2 system-ui, sans-serif;
       }
-      #mix-intro button:disabled { opacity: 0.6; cursor: default; }
-      #use-camera { background: #b3202a; color: #fff3e6; }
+      .overlay button:disabled { opacity: 0.6; cursor: default; }
+      #use-camera, #cookies-done-ok { background: #b3202a; color: #fff3e6; }
       #use-mouse { background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
       #mix-intro .note { min-height: 1.4em; margin: 12px 0 0; font-size: 13px; color: #ffd27a; }
 
-      /* the little tutorial while mixing: an icon going round a circle */
+      /* how many cookies are cut out: a slot for each, filled in as they're cut */
+      #cookie-counter {
+        position: fixed; left: 50%; top: 20px; transform: translate(-50%, -8px);
+        display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 999px;
+        background: rgba(20, 12, 8, 0.75); color: #ffe8c8; font: 500 14px/1.2 system-ui, sans-serif;
+        pointer-events: none; opacity: 0; transition: opacity 0.3s, transform 0.3s;
+      }
+      #cookie-counter.show { opacity: 1; transform: translate(-50%, 0); }
+      #cookie-counter .slots { display: flex; gap: 4px; }
+      #cookie-counter .slot {
+        display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+        box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.35); font-size: 15px;
+      }
+      #cookie-counter .slot.filled { box-shadow: none; animation: pop 0.35s; }
+      #cookie-counter b { color: #fff3e6; font-variant-numeric: tabular-nums; }
+      @keyframes pop { 0% { transform: scale(0.3); } 70% { transform: scale(1.25); } 100% { transform: none; } }
+
+      /* the little tutorial: an icon showing the movement (round a circle, up and down, round a star) */
       #tutorial {
         position: fixed; left: 50%; bottom: 76px; transform: translate(-50%, 8px);
         display: flex; align-items: center; gap: 14px; padding: 10px 18px 10px 10px;
@@ -91,7 +108,9 @@
     <button id="camera-btn" type="button">Mix with your hand (C)</button>
     <div id="camera"><video playsinline muted></video><canvas></canvas></div>
 
-    <div id="mix-intro" role="dialog" aria-modal="true" aria-labelledby="mix-intro-title">
+    <div id="cookie-counter" aria-live="polite"><span class="slots"></span><span><b id="cookie-count">0 / 6</b> cookies</span></div>
+
+    <div id="mix-intro" class="overlay" role="dialog" aria-modal="true" aria-labelledby="mix-intro-title">
       <div class="card">
         <div class="badge">🎄</div>
         <h2 id="mix-intro-title">Time to mix the dough!</h2>
@@ -102,6 +121,15 @@
           <button id="use-mouse" type="button">🖱️ Use the mouse</button>
         </div>
         <p class="note" id="mix-intro-note" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div id="cookies-done" class="overlay" role="dialog" aria-modal="true" aria-labelledby="cookies-done-title">
+      <div class="card">
+        <div class="badge">🍪🎉</div>
+        <h2 id="cookies-done-title">All the cookies are cut out!</h2>
+        <p id="cookies-done-text"></p>
+        <div class="buttons"><button id="cookies-done-ok" type="button">Yay!</button></div>
       </div>
     </div>
 
@@ -116,6 +144,10 @@
         <g id="tutorial-line" style="display: none">
           <line class="track" x1="32" y1="10" x2="32" y2="54" />
           <path class="arrow" d="M32 3 l6 8 h-12 z M32 61 l6 -8 h-12 z" />
+        </g>
+        <!-- round a star (cutting cookies) -->
+        <g id="tutorial-star" style="display: none">
+          <path class="track" d="M32,8 L38.5,23.1 L54.8,24.6 L42.5,35.4 L46.1,51.4 L32,43 L17.9,51.4 L21.5,35.4 L9.2,24.6 L25.5,23.1 Z" />
         </g>
         <text id="tutorial-icon" font-size="18" text-anchor="middle" dominant-baseline="central">
           ✋
