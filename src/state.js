@@ -15,6 +15,10 @@ const state = {
 	cutting: false, // the player is holding a cookie cutter or drawing a shape on the dough
 	cookies: [], // the cookies cut out of the dough so far, as saved (see cutting/cuts.js)
 	cut: false, // all the cookies are cut out
+	onTray: [], // which cookies (their number in `cookies`) are on the baking tray, in order
+	baking: false, // the cookies are in the oven
+	bakeStart: null, // when they went in (Date.now(), so a refresh doesn't stop the clock)
+	baked: null, // once they're out: { result: 'under' | 'perfect' | 'burnt', seconds }
 };
 
 const listeners = new Set();

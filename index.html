@@ -82,6 +82,20 @@
       #cookie-counter b { color: #fff3e6; font-variant-numeric: tabular-nums; }
       @keyframes pop { 0% { transform: scale(0.3); } 70% { transform: scale(1.25); } 100% { transform: none; } }
 
+      /* the oven clock while the cookies bake */
+      #oven-timer {
+        position: fixed; left: 50%; top: 20px; transform: translate(-50%, -8px);
+        display: flex; align-items: baseline; gap: 10px; padding: 8px 18px; border-radius: 999px;
+        background: rgba(20, 12, 8, 0.8); color: #ffe8c8; font: 500 14px/1.2 system-ui, sans-serif;
+        pointer-events: none; opacity: 0; transition: opacity 0.3s, transform 0.3s, background 0.6s;
+      }
+      #oven-timer.show { opacity: 1; transform: translate(-50%, 0); }
+      #oven-timer b { font-size: 22px; color: #ffb35c; font-variant-numeric: tabular-nums; }
+      #oven-timer.late { background: rgba(80, 20, 10, 0.85); }
+      .overlay .seconds { font-size: 13px; color: #d9bfa0; }
+      #bake-again { background: #b3202a; color: #fff3e6; }
+      #bake-over { background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
+
       /* the little tutorial: an icon showing the movement (round a circle, up and down, round a star) */
       #tutorial {
         position: fixed; left: 50%; bottom: 76px; transform: translate(-50%, 8px);
@@ -133,6 +147,21 @@
       </div>
     </div>
 
+    <div id="oven-timer" aria-hidden="true"><span>🔥 In the oven</span><b id="oven-time">0:00</b></div>
+
+    <div id="bake-result" class="overlay" role="dialog" aria-modal="true" aria-labelledby="bake-result-title">
+      <div class="card">
+        <div class="badge" id="bake-result-badge"></div>
+        <h2 id="bake-result-title"></h2>
+        <p id="bake-result-text"></p>
+        <p class="seconds" id="bake-result-seconds"></p>
+        <div class="buttons">
+          <button id="bake-again" type="button">Bake a new batch</button>
+          <button id="bake-over" type="button">Start over from the beginning</button>
+        </div>
+      </div>
+    </div>
+
     <div id="tutorial" aria-live="polite">
       <svg viewBox="0 0 64 64" aria-hidden="true">
         <!-- going round (mixing) -->
@@ -148,6 +177,11 @@
         <!-- round a star (cutting cookies) -->
         <g id="tutorial-star" style="display: none">
           <path class="track" d="M32,8 L38.5,23.1 L54.8,24.6 L42.5,35.4 L46.1,51.4 L32,43 L17.9,51.4 L21.5,35.4 L9.2,24.6 L25.5,23.1 Z" />
+        </g>
+        <!-- dragging something over (to the oven) -->
+        <g id="tutorial-drag" style="display: none">
+          <line class="track" x1="12" y1="52" x2="50" y2="14" />
+          <path class="arrow" d="M58 6 l-3 12 l-9 -9 z" />
         </g>
         <text id="tutorial-icon" font-size="18" text-anchor="middle" dominant-baseline="central">
           ✋

@@ -3,7 +3,7 @@
 //   dough isn't drawn), with a thin wall of dough around the inside of the hole
 // - the cookie itself, sitting in the hole, with softly rounded edges so the cut shows
 import * as THREE from 'three/webgpu';
-import { positionLocal, texture } from 'three/tsl';
+import { positionLocal, texture, uniform } from 'three/tsl';
 import { TABLE_TOP } from '../table.js';
 import { doughMaterial, SHEET_THICKNESS } from '../rolling/dough.js';
 import { bounds, apart, contains } from './outline.js';
@@ -19,6 +19,9 @@ let mask = null; // the canvas the holes are painted on
 let maskTexture = null;
 let wallMaterial = null;
 let cookieMaterial = null;
+
+// how baked the cookies are: 0 raw, 1 golden, 1.5 burnt (see baking/)
+export const bakeLevel = uniform( 0 );
 
 export const cuts = []; // { shape: 'star' | 'drawn', outline, cookie, wall }
 
@@ -42,7 +45,7 @@ export function initCuts( doughMesh ) {
 	dough.material.needsUpdate = true;
 
 	wallMaterial = doughMaterial( { side: THREE.BackSide } ); // seen from inside the hole
-	cookieMaterial = doughMaterial();
+	cookieMaterial = doughMaterial( { baked: bakeLevel } );
 
 }
 
@@ -122,6 +125,7 @@ export function cut( outline, shape ) {
 
 	}
 
+	cookie.userData.cutAt = cookie.position.clone(); // (where it goes back to if it's dropped)
 	cuts.push( { shape, outline, cookie, wall } );
 	return cookie;
 

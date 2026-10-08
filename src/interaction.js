@@ -8,6 +8,7 @@ import { pickRoots, pickRootOf, pickUp, putBack, releaseHeld, updateHeld } from 
 import { mixerHint, tryGrabMixer } from './mixer/index.js';
 import { rollingHint, tryRollingClick } from './rolling/index.js';
 import { cuttingHint, tryCuttingClick } from './cutting/index.js';
+import { bakingHint, tryBakingClick } from './baking/index.js';
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2( 2, 2 );
@@ -77,6 +78,7 @@ function onClick() {
 
 	}
 
+	if ( tryBakingClick( raycaster ) ) return;
 	if ( tryCuttingClick( raycaster ) ) return;
 	if ( tryRollingClick( raycaster ) ) return;
 	if ( tryGrabMixer( raycaster ) ) return;
@@ -92,6 +94,21 @@ function updateHover() {
 	if ( getState().busy ) {
 
 		hideHint();
+		return;
+
+	}
+
+	const bakingText = bakingHint( raycaster );
+	if ( bakingText === false ) {
+
+		hideHint();
+		return;
+
+	}
+
+	if ( bakingText ) {
+
+		showHint( bakingText.text, { clickable: bakingText.clickable } );
 		return;
 
 	}

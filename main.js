@@ -6,6 +6,7 @@ import { initBowl, updateBowl } from './src/bowl/index.js';
 import { initMixer, updateMixer } from './src/mixer/index.js';
 import { initRolling, updateRolling } from './src/rolling/index.js';
 import { initCutting, updateCutting } from './src/cutting/index.js';
+import { initBaking, updateBaking } from './src/baking/index.js';
 import { initInteraction, updateInteraction } from './src/interaction.js';
 import { trackProgress } from './src/progress.js';
 import { updateLights } from './src/lights.js';
@@ -20,6 +21,7 @@ trackProgress();
 initMixer( { scene, room: world.room, camera, controls, canvas: renderer.domElement } ); // after the ingredients: it appears once they're all in
 initRolling( { scene, room: world.room, camera, controls, canvas: renderer.domElement } ); // after the mixer: needs to know if the dough is mixed
 initCutting( { room: world.room, camera, controls } ); // after rolling: cuts the rolled-out dough
+initBaking( { room: world.room, camera, controls } ); // after cutting: bakes the cookies cut out
 initInteraction( { camera, canvas: renderer.domElement, interactables: world.interactables } );
 
 let lastTime = 0;
@@ -40,6 +42,7 @@ renderer.setAnimationLoop( ( time ) => {
 	updateMixer( dt );
 	updateRolling( dt );
 	updateCutting( dt );
+	updateBaking( dt );
 	render();
 
 } );

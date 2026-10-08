@@ -48,6 +48,17 @@ export function loadCookies() {
 
 }
 
+// how far the baking got: { onTray, bakeStart, baked } (see state.js)
+export function loadBaking() {
+
+	return {
+		onTray: Array.isArray( saved.onTray ) ? saved.onTray.filter( Number.isInteger ) : [],
+		bakeStart: typeof saved.bakeStart === 'number' ? saved.bakeStart : null,
+		baked: saved.baked?.result ? saved.baked : null,
+	};
+
+}
+
 // whether all the cookies were cut out
 export function loadCut() {
 
@@ -58,11 +69,11 @@ export function loadCut() {
 // save whenever the state changes
 export function trackProgress() {
 
-	subscribe( ( { inBowl, mixed, doughOut, rolled, cookies, cut } ) => {
+	subscribe( ( { inBowl, mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, baked } ) => {
 
 		try {
 
-			localStorage.setItem( KEY, JSON.stringify( { inBowl: inBowl.map( ( r ) => r.userData.id ), mixed, doughOut, rolled, cookies, cut } ) );
+			localStorage.setItem( KEY, JSON.stringify( { inBowl: inBowl.map( ( r ) => r.userData.id ), mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, baked } ) );
 
 		} catch { /* storage unavailable: progress just won't persist */ }
 

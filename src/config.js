@@ -46,6 +46,12 @@ export const COOKIE_COUNT = 6;
 export const CUTTER_SCALE = 0.5;
 export const MAX_SHAPE_RADIUS = 0.036;
 
+// baking: seconds in the oven. Around 20 they're underbaked, 40 is perfect and by 60 they're burnt;
+// taken out before UNDERBAKED_UNTIL they count as underbaked, from BURNT_FROM as burnt
+export const BAKE_PERFECT = 40;
+export const UNDERBAKED_UNTIL = 30;
+export const BURNT_FROM = 50;
+
 // a held ingredient floats this high above the floor and stays within these limits
 export const HOLD_HEIGHT = 1.15;
 export const HOLD_X = [ - 1.2, 1.2 ];

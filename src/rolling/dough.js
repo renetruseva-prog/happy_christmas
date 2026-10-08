@@ -32,12 +32,26 @@ function slabGeometry() {
 }
 
 // what dough looks like (also the cookies cut out of it): mottled, in the world's coordinates so
-// the pieces match up
-export function doughMaterial( options = {} ) {
+// the pieces match up. baked: a node for how baked it is (0 raw, 1 golden, 1.5 burnt), browning
+// from the edges in
+export function doughMaterial( { baked = null, ...options } = {} ) {
 
 	const material = new THREE.MeshStandardNodeMaterial( { roughness: 0.8, ...options } );
 	const mottle = mx_noise_float( positionWorld.mul( 60 ) ).mul( 0.5 ).add( 0.5 );
-	material.colorNode = mix( color( 0xc8975a ), color( 0xebd2a2 ), mottle ).mul( mx_noise_float( positionWorld.mul( 300 ) ).mul( 0.06 ).add( 0.97 ) );
+	const grain = mx_noise_float( positionWorld.mul( 300 ) ).mul( 0.06 ).add( 0.97 );
+	let tint = mix( color( 0xc8975a ), color( 0xebd2a2 ), mottle );
+
+	if ( baked ) {
+
+		const spots = mx_noise_float( positionWorld.mul( 140 ) ).mul( 0.25 ); // it doesn't brown evenly
+		const golden = mix( color( 0xc77a32 ), color( 0xe3a457 ), mottle );
+		const burnt = mix( color( 0x2a1408 ), color( 0x5a2f12 ), mottle );
+		tint = mix( tint, golden, smoothstep( 0.3, 1, baked.add( spots.mul( 0.4 ) ) ) );
+		tint = mix( tint, burnt, smoothstep( 1.1, 1.5, baked.add( spots ) ) );
+
+	}
+
+	material.colorNode = tint.mul( grain );
 	return material;
 
 }
