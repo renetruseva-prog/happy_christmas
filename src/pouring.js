@@ -983,6 +983,15 @@ export function bowlInfo() {
 
 }
 
+// the dough is taken out of the bowl: nothing is left in it
+export function emptyBowl() {
+
+	for ( const layer of layers ) layer.mesh.visible = false;
+	for ( const s of solids ) s.visible = false;
+	sugarGrains.clear();
+
+}
+
 // how high the bowl's contents reach at (x, z)
 export function contentsTop( x, z ) {
 

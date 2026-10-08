@@ -300,6 +300,7 @@ async function toggleCamera() {
 
 		stopHandTracking();
 		cameraButton.textContent = 'Mix with your hand (C)';
+		setState( { prefersCamera: false } );
 		showTutorial();
 		return;
 
@@ -311,6 +312,7 @@ async function toggleCamera() {
 		await startHandTracking();
 		if ( ! holding ) return stopHandTracking(); // put down while the camera was starting
 		cameraButton.textContent = 'Use the mouse instead (C)';
+		setState( { prefersCamera: true } );
 
 	} catch {
 
@@ -347,6 +349,7 @@ async function chooseCamera() {
 
 		await startHandTracking();
 		cameraButton.textContent = 'Use the mouse instead (C)';
+		setState( { prefersCamera: true } ); // the next steps use the camera too
 		hideIntro();
 		grab();
 

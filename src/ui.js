@@ -64,10 +64,10 @@ export function guideShown() {
 
 }
 
-// the bowl progress box redraws whenever the state changes
-subscribe( ( { inBowl, total, mixed, mixing } ) => {
+// the progress box redraws whenever the state changes
+subscribe( ( { inBowl, total, mixed, mixing, doughOut, rolling, rolled } ) => {
 
-	if ( mixing ) return; // the mixer shows its own progress
+	if ( mixing || rolling ) return; // they show their own progress
 
 	if ( inBowl.length === 0 ) {
 
@@ -77,7 +77,9 @@ subscribe( ( { inBowl, total, mixed, mixing } ) => {
 	}
 
 	const names = inBowl.map( ( r ) => r.userData.ingredient ).join( ', ' );
-	if ( mixed ) statusEl.textContent = 'The dough is ready! · press R to start over';
+	if ( rolled ) statusEl.textContent = 'The dough is rolled out! · press R to start over';
+	else if ( doughOut ) statusEl.textContent = 'Roll the dough out thin with the rolling pin';
+	else if ( mixed ) statusEl.textContent = 'The dough is ready! Take it out of the bowl';
 	else if ( inBowl.length === total ) statusEl.textContent = 'All ingredients are in the bowl! Grab the mixer · press R to start over';
 	else statusEl.textContent = `Bowl ${ inBowl.length }/${ total } · ${ names }`;
 	statusEl.style.opacity = 1;

@@ -4,6 +4,7 @@ import { loadKitchen } from './src/kitchen.js';
 import { initIngredients } from './src/ingredients.js';
 import { initPouring, updatePouring } from './src/pouring.js';
 import { initMixer, updateMixer } from './src/mixer.js';
+import { initRolling, updateRolling } from './src/rolling.js';
 import { initInteraction, updateInteraction } from './src/interaction.js';
 import { trackProgress } from './src/progress.js';
 import { updateLights } from './src/lights.js';
@@ -16,6 +17,7 @@ initPouring( world, scene, camera ); // before the ingredients: restoring saved 
 initIngredients( world );
 trackProgress();
 initMixer( { scene, room: world.room, camera, controls, canvas: renderer.domElement } ); // after the ingredients: it appears once they're all in
+initRolling( { scene, room: world.room, camera, controls, canvas: renderer.domElement } ); // after the mixer: needs to know if the dough is mixed
 initInteraction( { camera, canvas: renderer.domElement, interactables: world.interactables } );
 
 let lastTime = 0;
@@ -34,6 +36,7 @@ renderer.setAnimationLoop( ( time ) => {
 	updateSequences( dt );
 	updatePouring( dt );
 	updateMixer( dt );
+	updateRolling( dt );
 	render();
 
 } );
