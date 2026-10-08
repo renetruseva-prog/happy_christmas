@@ -8,6 +8,10 @@ const state = {
 	busy: false, // an ingredient is being poured/cracked/dropped into the bowl
 	mixing: false, // the player is holding the mixer over the bowl
 	mixed: false, // the ingredients have been mixed into dough
+	prefersCamera: false, // the player chose to use their hand (webcam) instead of the mouse
+	doughOut: false, // the dough has been taken out of the bowl onto the table
+	rolling: false, // the player is rolling the dough with the rolling pin
+	rolled: false, // the dough has been rolled out thin
 };
 
 const listeners = new Set();
