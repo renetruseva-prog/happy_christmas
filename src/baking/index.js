@@ -24,6 +24,7 @@ import { initSmoke, updateSmoke, smokeLevel, overSmoke, puffSmoke } from './smok
 import { initFlames, updateFlames, flareLevel } from './flames.js';
 import { initKnob, hitsKnob, turnKnob, setTemperature, shownTemperature, heatLevel, bakeSpeed, NORMAL } from './knob.js';
 import { setAlarm } from './alarm.js';
+import { VIEWS } from '../views.js';
 
 const UP = new THREE.Vector3( 0, 1, 0 );
 const CARRY_HEIGHT = 1.0; // a dragged cookie floats this high, over the counters
@@ -34,7 +35,7 @@ const TRAY_X = [ 0.6, 2.1 ];
 const TRAY_Z = [ - 1.68, - 0.75 ];
 
 // the view of the tray and the oven, once the cookies are all on the tray
-const OVEN_VIEW = { position: new THREE.Vector3( 1.15, 1.4, - 0.2 ), target: new THREE.Vector3( 1.45, 0.62, - 1.5 ) };
+const OVEN_VIEW = VIEWS.oven; // the view of the tray and the oven, once the cookies are all on the tray
 const ROUNDING = 0.0015; // a cookie's middle is this far over what it lies on (see cutting/cuts.js)
 
 // where the tray goes on its way into the oven: in front of the open door, then on the rack
