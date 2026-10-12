@@ -311,7 +311,6 @@ function guide() {
 	if ( guided ) return;
 	guided = true;
 	showGuide( {
-		icon: '🍪',
 		text: 'Cut out your cookies!',
 		small: `There's room for ${ COOKIE_COUNT }: pick up a star cutter and click the dough, or hold the mouse and draw your own shape`,
 		motion: 'star',

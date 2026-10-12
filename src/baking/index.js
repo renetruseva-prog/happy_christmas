@@ -294,19 +294,19 @@ function guideDragging() {
 
 	if ( guided ) return;
 	guided = true;
-	showGuide( { icon: '🍪', text: 'Put the cookies on the baking tray', small: 'Hold the mouse on a cookie and drop it on the tray next to the oven, one by one', motion: 'drag' } );
+	showGuide( { text: 'Put the cookies on the baking tray', small: 'Hold the mouse on a cookie and drop it on the tray next to the oven, one by one', motion: 'drag' } );
 
 }
 
 function guideTray() {
 
-	showGuide( { icon: '🔥', text: 'Now put the tray in the oven', small: 'Hold the mouse on the baking tray and drag it into the oven', motion: 'drag' } );
+	showGuide( { text: 'Now put the tray in the oven', small: 'Hold the mouse on the baking tray and drag it into the oven', motion: 'drag' } );
 
 }
 
 function guideBaking() {
 
-	showGuide( { icon: '⏱️', text: 'Keep an eye on the clock!', small: `About ${ BAKE_PERFECT } seconds at ${ NORMAL }° makes them perfect: turn the knob for hotter (faster) or cooler (slower). Click the oven to take them out`, motion: 'circle' } );
+	showGuide( { text: 'Keep an eye on the clock!', small: `About ${ BAKE_PERFECT } seconds at ${ NORMAL }° makes them perfect: turn the knob for hotter (faster) or cooler (slower). Click the oven to take them out`, motion: 'circle' } );
 	setTimeout( () => { if ( getState().baking ) hideGuide(); }, 9000 );
 
 }
