@@ -13,9 +13,12 @@ const HEAT = 2.5; // how much brighter the glow gets while baking
 let hinge = null; // the door turns around this
 let glowLight = null;
 let glowBase = 0;
-let cavityMaterial = null; // the inside, glowing when it's hot
+let cavityMaterial = null; // the inside, glowing a little when it's hot
+const COOL = new THREE.Color( 0x0c0705 );
+const HOT = new THREE.Color( 0x3a1608 );
 let display = null; // { canvas, texture }
 export const ovenParts = []; // everything that counts as "the oven" when dropping a cookie on it
+export let inside = null; // the cavity: { min, max } (a Box3), once it's made
 
 export function initOven( room ) {
 
@@ -78,11 +81,12 @@ function makeInside( room, door, body ) {
 	const width = opening.max.x - opening.min.x;
 	const height = opening.max.y - opening.min.y;
 	const depth = front - back - 0.06;
-	cavityMaterial = new THREE.MeshStandardNodeMaterial( { color: 0x1e1410, roughness: 0.7, metalness: 0.2, emissive: 0xff7a2a, emissiveIntensity: 0.05, side: THREE.BackSide } );
+	// (unlit: the oven's glow light is right in front of it and would light it up bright orange)
+	cavityMaterial = new THREE.MeshBasicNodeMaterial( { color: COOL, side: THREE.BackSide } );
 	const cavity = new THREE.Mesh( new THREE.BoxGeometry( width, height, depth ), cavityMaterial );
 	cavity.position.set( ( opening.min.x + opening.max.x ) / 2, ( opening.min.y + opening.max.y ) / 2, front - depth / 2 - 0.002 );
-	cavity.receiveShadow = true;
 	room.add( cavity );
+	inside = new THREE.Box3().setFromObject( cavity );
 
 	// the old glowing panel just behind the front would block the way in
 	const glow = room.getObjectByName( 'Oven_Interior_Glow' );
@@ -109,6 +113,13 @@ function makeInside( room, door, body ) {
 
 }
 
+// how far open the door is (0 shut .. 1 open)
+export function doorOpen() {
+
+	return hinge ? hinge.rotation.x / OPEN_ANGLE : 0;
+
+}
+
 export function openDoor( open = true ) {
 
 	if ( ! hinge ) return Promise.resolve();
@@ -119,12 +130,12 @@ export function openDoor( open = true ) {
 
 }
 
-// heat 0 (off) .. 1 (baking); t: the time, for a little unsteadiness, like a real element
+// heat 0 (off) .. 1 (baking), more when it's hot or flaring; t: the time, for a little unsteadiness, like a real element
 export function setHeat( heat, t = 0 ) {
 
 	const flicker = heat > 0 ? 1 + Math.sin( t * 7 ) * Math.sin( t * 2.3 ) * 0.08 : 1;
 	if ( glowLight ) glowLight.intensity = glowBase * ( 1 + ( HEAT - 1 ) * heat ) * flicker;
-	if ( cavityMaterial ) cavityMaterial.emissiveIntensity = ( 0.05 + 0.35 * heat ) * flicker;
+	if ( cavityMaterial ) cavityMaterial.color.lerpColors( COOL, HOT, Math.min( 1, heat * flicker ) ); // (dark, so the flames stand out)
 
 }
 

@@ -5,9 +5,9 @@ import { COOKIE_COUNT, BAKE_PERFECT } from './config.js';
 
 // what each baking result is called (see baking/)
 const RESULTS = {
-	under: { badge: '🥟', title: 'Underbaked!', text: 'They\'re still pale and doughy in the middle.', status: 'Underbaked cookies' },
-	perfect: { badge: '🍪✨', title: 'Perfectly baked!', text: 'Golden brown and crisp at the edges. Delicious!', status: 'Perfectly baked cookies!' },
-	burnt: { badge: '🔥', title: 'Burnt!', text: 'Oh no, they\'re black and smoky.', status: 'Burnt cookies' },
+	under: { title: 'Underbaked!', text: 'They\'re still pale and doughy in the middle.', status: 'Underbaked cookies' },
+	perfect: { title: 'Perfectly baked!', text: 'Golden brown and crisp at the edges. Delicious!', status: 'Perfectly baked cookies!' },
+	burnt: { title: 'Burnt!', text: 'Oh no, they\'re black and smoky.', status: 'Burnt cookies' },
 };
 
 const hintEl = document.getElementById( 'hint' );
@@ -38,7 +38,6 @@ export function showStatus( text ) {
 
 // ---------- the little tutorial: an icon showing the movement, and what to do ----------
 const guide = document.getElementById( 'tutorial' );
-const guideIcon = document.getElementById( 'tutorial-icon' );
 const guideMotion = document.getElementById( 'tutorial-motion' );
 const guideText = document.getElementById( 'tutorial-text' );
 const guideSmall = document.getElementById( 'tutorial-small' );
@@ -50,13 +49,12 @@ const MOTIONS = {
 };
 
 // motion: 'circle', 'line', 'drag' or 'star'
-export function showGuide( { icon, text, small = '', motion = 'circle' } ) {
+export function showGuide( { text, small = '', motion = 'circle' } ) {
 
 	const m = MOTIONS[ motion ];
 	for ( const [ name, other ] of Object.entries( MOTIONS ) ) document.getElementById( other.show ).style.display = name === motion ? '' : 'none';
 	guideMotion.setAttribute( 'path', m.path );
 	guideMotion.setAttribute( 'dur', m.dur );
-	guideIcon.firstChild.textContent = icon;
 	guideText.textContent = text;
 	guideSmall.textContent = small;
 	guide.classList.add( 'show' );
@@ -118,7 +116,7 @@ subscribe( ( { rolled, cookies, baking, baked } ) => {
 		const filled = !! cookie;
 		if ( slot.classList.contains( 'filled' ) === filled ) return; // (so only the new one pops)
 		slot.classList.toggle( 'filled', filled );
-		slot.textContent = filled ? ( cookie.shape === 'star' ? '⭐' : '🍪' ) : '';
+		slot.classList.toggle( 'drawn', filled && cookie.shape !== 'star' ); // (stars and drawn shapes get different colours)
 
 	} );
 	count.textContent = `${ Math.min( cookies.length, COOKIE_COUNT ) } / ${ COOKIE_COUNT }`;
@@ -150,13 +148,19 @@ export function clock( seconds ) {
 
 }
 
-// seconds: how long they've been in; null hides it
-export function showOvenTimer( seconds ) {
+const ovenLabel = document.getElementById( 'oven-label' );
+
+// seconds: how long they've been in (null hides it); temperature: what the oven's set to;
+// smoke: how smoky it is (0..1): the clock gets hard to read; alarm: the smoke alarm is going
+export function showOvenTimer( seconds, { temperature = 180, smoke = 0, alarm = false } = {} ) {
 
 	ovenTimer.classList.toggle( 'show', seconds !== null );
 	if ( seconds === null ) return;
 	ovenTime.textContent = clock( seconds );
-	ovenTimer.classList.toggle( 'late', seconds > BAKE_PERFECT + 10 );
+	ovenTime.style.filter = smoke > 0.05 ? `blur(${ ( smoke * 7 ).toFixed( 1 ) }px)` : '';
+	ovenLabel.textContent = alarm ? 'Smoke alarm! Wave the smoke away' : `In the oven · ${ temperature }°`;
+	ovenTimer.classList.toggle( 'alarm', alarm );
+	ovenTimer.classList.toggle( 'late', ! alarm && smoke > 0.05 );
 
 }
 
@@ -171,13 +175,14 @@ document.getElementById( 'bake-again' ).addEventListener( 'click', () => {
 document.getElementById( 'bake-over' ).addEventListener( 'click', () => resetProgress() );
 
 // { result, seconds }; again(): bake another batch
-export function showBakeResult( { result: kind, seconds }, again ) {
+export function showBakeResult( { result: kind, seconds, real, temperature }, again ) {
 
 	const r = RESULTS[ kind ];
-	document.getElementById( 'bake-result-badge' ).textContent = r.badge;
 	document.getElementById( 'bake-result-title' ).textContent = r.title;
 	document.getElementById( 'bake-result-text' ).textContent = r.text;
-	document.getElementById( 'bake-result-seconds' ).textContent = `In the oven for ${ Math.round( seconds ) } seconds · perfect is about ${ BAKE_PERFECT }`;
+	document.getElementById( 'bake-result-seconds' ).textContent = temperature === 180 || ! temperature
+		? `In the oven for ${ Math.round( seconds ) } seconds at 180° · perfect is about ${ BAKE_PERFECT }`
+		: `In the oven for ${ Math.round( real ) } seconds at ${ temperature }°, like ${ Math.round( seconds ) } at 180° · perfect is about ${ BAKE_PERFECT } at 180°`;
 	onAgain = again;
 	result.classList.add( 'show' );
 	document.getElementById( 'bake-again' ).focus();

@@ -1,5 +1,5 @@
 // entry point: builds the stage, loads the kitchen and runs the frame loop
-import { renderer, scene, camera, controls, constrainCamera, render } from './src/stage.js';
+import { renderer, scene, camera, controls, constrainCamera, adaptResolution, render } from './src/stage.js';
 import { loadKitchen } from './src/kitchen.js';
 import { initIngredients } from './src/ingredients.js';
 import { initBowl, updateBowl } from './src/bowl/index.js';
@@ -29,6 +29,7 @@ let lastTime = 0;
 renderer.setAnimationLoop( ( time ) => {
 
 	const t = time / 1000;
+	adaptResolution( t - lastTime );
 	const dt = Math.min( t - lastTime, 0.1 );
 	lastTime = t;
 

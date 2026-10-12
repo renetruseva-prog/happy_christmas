@@ -5,6 +5,10 @@ import { getState, setState } from './state.js';
 import { tweenTo, cancelTween } from './tween.js';
 import { loadProgress } from './progress.js';
 import { isOverBowl, addToBowl, restoreInBowl } from './bowl/index.js';
+import { VIEWS, currentView, moveCameraTo, lockView } from './views.js';
+import { pace } from './sequence.js';
+
+const POUR_PACE = 1.5; // how much faster than written the ingredient animations play
 
 let kitchen = null;
 let interactables = null;
@@ -89,13 +93,26 @@ export function putBack( root ) {
 
 }
 
-export function dropInBowl( root ) {
+export async function dropInBowl( root ) {
 
 	// it can't be clicked any more; pour/crack/drop it in (see bowl/), and only count it
 	// as in the bowl once that's finished. Clicks wait while it plays (busy).
 	removeInteractable( root );
 	setState( { busy: true } );
-	addToBowl( root ).then( () => setState( { busy: false, inBowl: [ ...getState().inBowl, root ] } ) );
+
+	// the camera moves to a fixed view over the bowl, and the player can't turn it until the
+	// ingredient is in, so the whole thing can be seen; then it goes back to where it was
+	// (all of it a bit quicker than written: the pouring and the moves each take a few seconds
+	// and they add up over six ingredients)
+	pace.value = POUR_PACE;
+	const before = currentView();
+	await moveCameraTo( VIEWS.pour, { release: false } );
+	await addToBowl( root );
+	await moveCameraTo( before, { duration: 0.8, release: false } );
+	lockView( false );
+	pace.value = 1;
+
+	setState( { busy: false, inBowl: [ ...getState().inBowl, root ] } );
 
 }
 

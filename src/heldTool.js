@@ -159,7 +159,7 @@ export class HeldTool {
 
 		const withHand = isTracking();
 		const { text, small } = withHand ? this.guide.hand : this.guide.mouse;
-		showGuide( { icon: withHand ? '✋' : '🖱️', text, small, motion: this.guide.motion } );
+		showGuide( { text, small, motion: this.guide.motion } );
 		this.guideFrom = this.progress();
 		this.stillFor = 0;
 

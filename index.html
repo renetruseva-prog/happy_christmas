@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cookie Baking Simulator</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <style>
       html, body { margin: 0; overflow: hidden; background: #0d0a08; }
       #hint {
@@ -51,7 +52,6 @@
         transform: translateY(12px) scale(0.97); transition: transform 0.3s;
       }
       .overlay.show .card { transform: none; }
-      .overlay .badge { font-size: 40px; line-height: 1; }
       .overlay h2 { margin: 10px 0 6px; font-size: 22px; color: #fff3e6; }
       .overlay p { margin: 0 0 10px; }
       #mix-intro .privacy { font-size: 13px; color: #d9bfa0; }
@@ -78,7 +78,8 @@
         display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
         box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.35); font-size: 15px;
       }
-      #cookie-counter .slot.filled { box-shadow: none; animation: pop 0.35s; }
+      #cookie-counter .slot.filled { box-shadow: none; background: #e0a455; animation: pop 0.35s; }
+      #cookie-counter .slot.filled.drawn { background: #c77a32; }
       #cookie-counter b { color: #fff3e6; font-variant-numeric: tabular-nums; }
       @keyframes pop { 0% { transform: scale(0.3); } 70% { transform: scale(1.25); } 100% { transform: none; } }
 
@@ -92,9 +93,34 @@
       #oven-timer.show { opacity: 1; transform: translate(-50%, 0); }
       #oven-timer b { font-size: 22px; color: #ffb35c; font-variant-numeric: tabular-nums; }
       #oven-timer.late { background: rgba(80, 20, 10, 0.85); }
+      #oven-timer.alarm { background: rgba(150, 20, 20, 0.92); animation: alarm 0.55s steps(2) infinite; }
+      #oven-timer b { transition: filter 0.3s; }
+      @keyframes alarm { 50% { background: rgba(60, 10, 10, 0.92); } }
       .overlay .seconds { font-size: 13px; color: #d9bfa0; }
       #bake-again { background: #b3202a; color: #fff3e6; }
       #bake-over { background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
+
+      /* while the cookies are carried to the oven, the mouse is a 3D hand in the room (see
+         baking/hand.js), so the normal pointer is hidden while it's showing */
+      body.hand-mode { cursor: none !important; }
+
+      /* which keys walk around the room */
+      #walk-keys {
+        position: fixed; left: 20px; bottom: 20px; padding: 10px 14px; border-radius: 14px;
+        background: rgba(20, 12, 8, 0.8); color: #ffe8c8; font: 500 12px/1.3 system-ui, sans-serif;
+        pointer-events: none; opacity: 0; transform: translateY(8px); transition: opacity 0.3s, transform 0.3s;
+      }
+      #walk-keys.show { opacity: 1; transform: none; }
+      #walk-keys .pad { display: grid; grid-template-columns: repeat(3, 34px); gap: 4px; justify-content: center; }
+      #walk-keys kbd {
+        display: grid; place-items: center; height: 30px; border-radius: 7px; font: 600 12px/1 system-ui, sans-serif;
+        background: #3a261a; color: #ffe8c8; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 232, 200, 0.25);
+        transition: background 0.1s, color 0.1s, transform 0.1s;
+      }
+      #walk-keys kbd small { font-size: 9px; opacity: 0.7; }
+      #walk-keys kbd.down { background: #e0a455; color: #2a1a12; transform: translateY(2px); }
+      #walk-keys .up { grid-column: 2; }
+      #walk-keys p { margin: 8px 0 0; text-align: center; color: #d9bfa0; }
 
       /* the little tutorial: an icon showing the movement (round a circle, up and down, round a star) */
       #tutorial {
@@ -122,17 +148,26 @@
     <button id="camera-btn" type="button">Mix with your hand (C)</button>
     <div id="camera"><video playsinline muted></video><canvas></canvas></div>
 
+    <div id="walk-keys" aria-hidden="true">
+      <div class="pad">
+        <kbd class="up" data-key="ahead">&uarr;<small>W</small></kbd>
+        <kbd data-key="left" style="grid-column: 1; grid-row: 2">&larr;<small>A</small></kbd>
+        <kbd data-key="back" style="grid-column: 2; grid-row: 2">&darr;<small>S</small></kbd>
+        <kbd data-key="right" style="grid-column: 3; grid-row: 2">&rarr;<small>D</small></kbd>
+      </div>
+      <p>Walk around the room</p>
+    </div>
+
     <div id="cookie-counter" aria-live="polite"><span class="slots"></span><span><b id="cookie-count">0 / 6</b> cookies</span></div>
 
     <div id="mix-intro" class="overlay" role="dialog" aria-modal="true" aria-labelledby="mix-intro-title">
       <div class="card">
-        <div class="badge">🎄</div>
         <h2 id="mix-intro-title">Time to mix the dough!</h2>
         <p>Stir with your <b>real hand</b> in front of your webcam, or with the mouse.</p>
         <p class="privacy">The camera picture stays on your computer. It's only used to follow your hand, and it's never saved or sent anywhere.</p>
         <div class="buttons">
-          <button id="use-camera" type="button">📷 Use my camera</button>
-          <button id="use-mouse" type="button">🖱️ Use the mouse</button>
+          <button id="use-camera" type="button">Use my camera</button>
+          <button id="use-mouse" type="button">Use the mouse</button>
         </div>
         <p class="note" id="mix-intro-note" aria-live="polite"></p>
       </div>
@@ -140,18 +175,16 @@
 
     <div id="cookies-done" class="overlay" role="dialog" aria-modal="true" aria-labelledby="cookies-done-title">
       <div class="card">
-        <div class="badge">🍪🎉</div>
         <h2 id="cookies-done-title">All the cookies are cut out!</h2>
         <p id="cookies-done-text"></p>
         <div class="buttons"><button id="cookies-done-ok" type="button">Yay!</button></div>
       </div>
     </div>
 
-    <div id="oven-timer" aria-hidden="true"><span>🔥 In the oven</span><b id="oven-time">0:00</b></div>
+    <div id="oven-timer" aria-live="polite"><span id="oven-label">In the oven</span><b id="oven-time">0:00</b></div>
 
     <div id="bake-result" class="overlay" role="dialog" aria-modal="true" aria-labelledby="bake-result-title">
       <div class="card">
-        <div class="badge" id="bake-result-badge"></div>
         <h2 id="bake-result-title"></h2>
         <p id="bake-result-text"></p>
         <p class="seconds" id="bake-result-seconds"></p>
@@ -183,10 +216,9 @@
           <line class="track" x1="12" y1="52" x2="50" y2="14" />
           <path class="arrow" d="M58 6 l-3 12 l-9 -9 z" />
         </g>
-        <text id="tutorial-icon" font-size="18" text-anchor="middle" dominant-baseline="central">
-          ✋
+        <circle id="tutorial-icon" r="5" fill="#ffb35c" stroke="#fff3e6" stroke-width="1.5">
           <animateMotion id="tutorial-motion" dur="1.6s" repeatCount="indefinite" path="M32,10 a22,22 0 1,1 -0.01,0" />
-        </text>
+        </circle>
       </svg>
       <div><b id="tutorial-text"></b><small id="tutorial-small"></small></div>
     </div>
