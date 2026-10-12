@@ -26,7 +26,7 @@ import { findTray, slotPosition, placeTray, moveTray } from './tray.js';
 import { initSmoke, updateSmoke, smokeLevel, overSmoke, puffSmoke } from './smoke.js';
 import { initFlames, updateFlames, flareLevel } from './flames.js';
 import { initKnob, hitsKnob, turnKnob, setTemperature, shownTemperature, heatLevel, bakeSpeed, NORMAL } from './knob.js';
-import { setAlarm } from './alarm.js';
+import { setAlarm, silenceAlarm } from './alarm.js';
 import { VIEWS } from '../views.js';
 import { enableWalking, updateWalking, walkPose, reachPoint, isBlocked } from '../walking.js';
 import { addSolids } from '../solids.js';
@@ -59,6 +59,7 @@ let dragging = null; // what's being dragged: { tray: true } or { knob: true, x,
 let overTarget = false; // the tray is over the oven right now
 let carrying = null; // the cookie in the hand: { cookie, index }
 let handShown = false; // the mouse is a hand right now
+let takingOut = false; // the cookies are coming out of the oven (not carried any more, not baked yet)
 let guideKey = ''; // which walking instructions are showing
 let notice = null; // a short message for the hover hint, and for how long
 let noticeFor = 0;
@@ -103,7 +104,7 @@ function looseCookies() {
 function handMode() {
 
 	const { cut, baking, baked } = getState();
-	return cut && ! baking && ! baked;
+	return cut && ! baking && ! baked && ! takingOut;
 
 }
 
@@ -368,7 +369,9 @@ async function takeOut() {
 	const result = { result: resultFor( bakedFor ), seconds: Math.round( bakedFor * 10 ) / 10, real: Math.round( realSeconds() ), temperature: shownTemperature() };
 	bakeLevel.value = bakedFor / BAKE_PERFECT;
 	setState( { baking: false, busy: true } );
+	takingOut = true;
 	showOvenTimer( null );
+	silenceAlarm();
 	hideGuide();
 
 	// (opening the door lets out a puff of smoke if it's smoky in there)
@@ -379,6 +382,7 @@ async function takeOut() {
 	await moveTray( tray, tray.centre, { duration: 0.9, lift: 0.15 } );
 	await openDoor( false );
 	setState( { busy: false, baked: result } );
+	takingOut = false;
 	showBakeResult( result, bakeAgain );
 
 }
@@ -687,7 +691,7 @@ export function updateBaking( dt ) {
 	const smoking = baking ? THREE.MathUtils.clamp( ( s - ( BURNT_FROM - 5 ) ) / 15, 0, 1 ) : 0;
 	updateSmoke( dt, { target: smoking, darkness: THREE.MathUtils.clamp( ( s - BURNT_FROM ) / 10, 0, 1 ), ray: raycaster.ray, camera } );
 	const smoke = smokeLevel();
-	setAlarm( smoke > SMOKE_ALARM );
+	setAlarm( baking && smoke > SMOKE_ALARM ); // (only while it's baking: once the cookies are out it's quiet at once)
 	if ( baking ) showOvenTimer( realSeconds(), { temperature: shownTemperature(), smoke, alarm: smoke > SMOKE_ALARM } );
 
 }
