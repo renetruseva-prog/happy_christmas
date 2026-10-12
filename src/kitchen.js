@@ -3,6 +3,7 @@ import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { LIGHT_SCALE, BAKE_BOOST, PENDANT_LIGHT, PENDANT_BULB_GLOW } from './config.js';
 import { trackLight, trackBulb } from './lights.js';
+import { paperSack } from './paperSack.js';
 
 export async function loadKitchen( scene, camera, controls ) {
 
@@ -14,6 +15,7 @@ export async function loadKitchen( scene, camera, controls ) {
 
 		if ( obj.isMesh && obj.name.startsWith( 'XLights_Bulbs' ) ) trackBulb( obj );
 		if ( obj.isMesh && obj.name === 'Pendant_Bulb' ) obj.material.emissiveIntensity *= PENDANT_BULB_GLOW;
+		if ( obj.isMesh && obj.name === 'Flour_Bag' ) paperSack( obj );
 
 		if ( obj.isMesh && obj.userData.baked ) {
 
@@ -41,6 +43,7 @@ export async function loadKitchen( scene, camera, controls ) {
 				obj.castShadow = true;
 				obj.shadow.mapSize.set( 2048, 2048 );
 				obj.shadow.bias = - 0.0005;
+				obj.shadow.normalBias = 0.02; // (stops the stripy self-shadowing on flat sides, like the flour bag's)
 
 			}
 
