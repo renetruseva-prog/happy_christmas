@@ -20,6 +20,7 @@ const iMouse = uniform( new THREE.Vector2( 0.5, 0.5 ) ); // 0..1 across the fire
 const hover = uniform( 0 ); // the mouse is over the oven (eased)
 const heat = uniform( 0 ); // 0 out .. 1 full
 const flare = uniform( 0 );
+const fierce = uniform( 0.3 ); // how hot the oven is set: 0 (the coolest) .. 1 (the hottest), eased
 
 const plane = new THREE.Plane();
 const at = new THREE.Vector3();
@@ -36,8 +37,9 @@ export function initFlames( room ) {
 	const sides = smoothstep( 0, 0.12, uv().x ).mul( smoothstep( 1, 0.88, uv().x ) ).mul( smoothstep( 1, 0.85, uv().y ) );
 	// Shadertoy's colours go straight to the screen (sRGB); three.js works in linear colour and
 	// converts at the end, so convert them first or they come out washed out
-	const color = sRGBTransferEOTF( fire( { time: iTime, resolution: iResolution, mouse: iMouse, hover, heat, flare } ) );
-	material.colorNode = color.mul( sides ).mul( flare.mul( 0.8 ).add( 1 ) ).mul( BRIGHTNESS ); // (brighter while it flares)
+	const color = sRGBTransferEOTF( fire( { time: iTime, resolution: iResolution, mouse: iMouse, hover, heat, flare, fierce } ) );
+	// (brighter while it flares, and brighter the hotter the oven)
+	material.colorNode = color.mul( sides ).mul( flare.mul( 0.8 ).add( 1 ) ).mul( fierce.mul( 0.25 ).add( 0.75 ) ).mul( BRIGHTNESS );
 
 	mesh = new THREE.Mesh( new THREE.PlaneGeometry( size.x, size.y ), material );
 	mesh.name = 'Oven_Flames';
@@ -54,12 +56,15 @@ export function flareLevel() {
 
 }
 
-// target: how hot it should be (0..1); ray: where the mouse points; overOven: and it's on the oven
-export function updateFlames( dt, { target, ray, overOven } ) {
+// target: on (1) or out (0); hot: how hot the oven is set (0..1); ray: where the mouse points;
+// overOven: and it's on the oven
+export function updateFlames( dt, { target, hot, ray, overOven } ) {
 
 	if ( ! mesh ) return;
 
-	iTime.value += dt;
+	// the hotter it is, the faster the flames move, as well as the taller and busier they are
+	fierce.value += ( hot - fierce.value ) * ( 1 - Math.exp( - dt * 3 ) );
+	iTime.value += dt * ( 0.55 + 1.6 * fierce.value );
 	heat.value += ( target - heat.value ) * ( 1 - Math.exp( - dt * ( target > heat.value ? 2 : 1.2 ) ) );
 	mesh.visible = heat.value > 0.01;
 	if ( ! mesh.visible ) return;

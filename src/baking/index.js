@@ -678,8 +678,8 @@ export function updateBaking( dt ) {
 	// mouse while that's over the oven
 	raycaster.setFromCamera( pointer, camera );
 	const overOven = ! dragging && hitsOven( raycaster );
-	updateFlames( dt, { target: baking ? 0.45 + 0.55 * heatLevel() + 0.1 * Math.min( 1, s / ( BURNT_FROM + 10 ) ) : 0, ray: raycaster.ray, overOven } );
-	setHeat( ( baking ? 0.6 + 0.6 * heatLevel() : 0 ) + flareLevel(), performance.now() / 1000 );
+	updateFlames( dt, { target: baking ? 1 : 0, hot: heatLevel(), ray: raycaster.ray, overOven } );
+	setHeat( ( baking ? 0.4 + 0.9 * heatLevel() : 0 ) + flareLevel(), performance.now() / 1000 );
 
 	// smoke (a Shadertoy shader too, see shaders/smoke.js): from 45 seconds, when they start to
 	// burn, thicker and darker until they're black; it clears once they're out, or for a while
