@@ -5,6 +5,7 @@ import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { MAX_DISTANCE, ROOM_MIN, ROOM_MAX } from './config.js';
 import { addExtraLights } from './lights.js';
+import { keepCameraOut } from './solids.js';
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color( 0x0d0a08 );
@@ -72,6 +73,9 @@ export function constrainCamera() {
 	// zooming/orbiting out stops where the camera would hit a wall
 	viewDir.subVectors( camera.position, controls.target ).normalize();
 	controls.maxDistance = Math.max( controls.minDistance, Math.min( MAX_DISTANCE, distanceToWall( controls.target, viewDir ) ) );
+
+	// and it can't go under the table, into the counters or the tree, or through the floor
+	keepCameraOut( camera );
 
 }
 
