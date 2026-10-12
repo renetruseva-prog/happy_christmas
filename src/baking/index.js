@@ -171,7 +171,14 @@ function lookAtOven( duration = 1.4 ) {
 
 }
 
-// fly a cookie to `to` along an arc, back to its own size
+// a cookie lying flat (as cut: see cutting/cuts.js), and how far it's tilted up towards the
+// player while it's held, so the face of it shows
+const FLAT = new THREE.Quaternion().setFromEuler( new THREE.Euler( - Math.PI / 2, 0, 0 ) );
+const HOLD_TILT = 0.95;
+const tilted = new THREE.Quaternion();
+const towards = new THREE.Vector3();
+
+// fly a cookie to `to` along an arc, back to its own size and lying flat
 function flyCookie( cookie, to, duration = 0.5 ) {
 
 	const from = cookie.position.clone();
@@ -183,6 +190,7 @@ function flyCookie( cookie, to, duration = 0.5 ) {
 		cookie.scale.setScalar( THREE.MathUtils.lerp( size, 1, ease( k ) ) );
 
 	} );
+		cookie.quaternion.slerpQuaternions( fromQ, FLAT, ease( k ) );
 
 }
 
@@ -288,12 +296,17 @@ async function placeCarried() {
 function followHand( dt ) {
 
 	const { cookie } = carrying;
-	at.copy( hand3d.palm ).y -= 0.045;
+	hand3d.holdPoint( at );
 	const k = 1 - Math.exp( - dt * 30 );
 	cookie.position.lerp( at, k );
 	cookie.scale.setScalar( THREE.MathUtils.lerp( cookie.scale.x, HOLD_SCALE, k ) );
 
 }
+
+	// tilted up towards the player
+	towards.subVectors( camera.position, cookie.position ).setY( 0 ).normalize();
+	tilted.setFromAxisAngle( towards.cross( UP ).negate().normalize(), HOLD_TILT ).multiply( FLAT );
+	cookie.quaternion.slerp( tilted, k );
 
 const flatLook = new THREE.Vector3();
 const floorAt = new THREE.Vector3();
@@ -515,7 +528,7 @@ export function initBaking( { room, camera: cam, controls: ctrl } ) {
 	tray = findTray( room );
 	if ( ! tray ) return;
 	hand3d = new Hand();
-	room.add( hand3d.root, hand3d.arm );
+	room.add( hand3d.root );
 	addSolids( room );
 	initOven( room );
 	initKnob( room );
@@ -618,7 +631,7 @@ export function updateBaking( dt ) {
 	const point = handMode() ? handPoint() : null;
 	camera.getWorldDirection( flatLook ).setY( 0 );
 	if ( flatLook.lengthSq() < 1e-6 ) flatLook.set( 0, 0, - 1 );
-	hand3d.update( dt, { point, look: flatLook.normalize(), grip: carrying || dragging?.tray ? GRIP : 0.12, camera } );
+	hand3d.update( dt, { point, look: flatLook.normalize(), grip: carrying || dragging?.tray ? GRIP : 0.12 } );
 	document.body.classList.toggle( 'hand-mode', hand3d.show );
 
 	if ( hand ) {
