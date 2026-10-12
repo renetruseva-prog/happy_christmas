@@ -423,7 +423,7 @@ export function initCutting( { room: kitchen, camera: cam, controls: ctrl } ) {
 	window.addEventListener( 'pointermove', onPointerMove );
 	window.addEventListener( 'pointerup', () => { if ( drawing ) finishDrawing(); } );
 	window.addEventListener( 'blur', () => { if ( drawing ) { stopDrawing(); trace.clear(); } } );
-	window.addEventListener( 'wheel', ( e ) => { if ( held && following ) held.turnedTo += Math.sign( e.deltaY ) * TURN_STEP; } );
+	window.addEventListener( 'wheel', ( e ) => { if ( held && following && ! e.ctrlKey ) held.turnedTo += Math.sign( e.deltaY ) * TURN_STEP; } );
 	window.addEventListener( 'keydown', ( e ) => {
 
 		if ( e.key !== 'Escape' ) return;

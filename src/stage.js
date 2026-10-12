@@ -73,6 +73,12 @@ function distanceToWall( origin, dir ) {
 
 export function constrainCamera() {
 
+// Pinching or Ctrl-scrolling would zoom the whole page (blowing up the picture and the panels)
+// whenever the game doesn't take the gesture itself, as when a cutter is held. The game zooms
+// the view with them instead (or ignores them), and the page stays put.
+window.addEventListener( 'wheel', ( e ) => { if ( e.ctrlKey ) e.preventDefault(); }, { passive: false } );
+for ( const type of [ 'gesturestart', 'gesturechange', 'gestureend' ] ) window.addEventListener( type, ( e ) => e.preventDefault() ); // (Safari)
+
 	// panning (right-drag) moves the target: keep it inside the room too
 	roomBounds.clampPoint( controls.target, controls.target );
 
