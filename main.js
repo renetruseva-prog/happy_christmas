@@ -13,11 +13,12 @@ import { trackProgress } from './src/progress.js';
 import { updateLights } from './src/lights.js';
 import { updateTweens } from './src/tween.js';
 import { updateSequences } from './src/sequence.js';
+import { initReflections, updateReflections } from './src/reflections.js';
 import './src/ui.js';
 
 const world = await loadKitchen( scene, camera, controls );
-initBowl( world, scene, camera ); // before the ingredients: restoring saved progress uses it
 addChristmas( world.room, scene, camera ); // snow, frost, presents, a snowman...
+initBowl( world, scene, camera ); // before the ingredients: restoring saved progress uses it
 initIngredients( world );
 trackProgress();
 initMixer( { scene, room: world.room, camera, controls, canvas: renderer.domElement } ); // after the ingredients: it appears once they're all in
@@ -25,6 +26,7 @@ initRolling( { scene, room: world.room, camera, controls, canvas: renderer.domEl
 initCutting( { room: world.room, camera, controls } ); // after rolling: cuts the rolled-out dough
 initBaking( { room: world.room, camera, controls } ); // after cutting: bakes the cookies cut out
 initInteraction( { camera, canvas: renderer.domElement, interactables: world.interactables } );
+initReflections( world.room ); // the shiny ingredients reflect the kitchen
 
 let lastTime = 0;
 
@@ -36,9 +38,9 @@ renderer.setAnimationLoop( ( time ) => {
 	lastTime = t;
 
 	updateLights( t );
+	updateChristmas( dt, t );
 	constrainCamera();
 	controls.update();
-	updateChristmas( dt, t );
 	updateInteraction( dt );
 	updateTweens( dt );
 	updateSequences( dt );
@@ -47,6 +49,7 @@ renderer.setAnimationLoop( ( time ) => {
 	updateRolling( dt );
 	updateCutting( dt );
 	updateBaking( dt );
+	updateReflections( renderer, scene );
 	render();
 
 } );

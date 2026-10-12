@@ -183,15 +183,16 @@ const towards = new THREE.Vector3();
 function flyCookie( cookie, to, duration = 0.5 ) {
 
 	const from = cookie.position.clone();
+	const fromQ = cookie.quaternion.clone();
 	const size = cookie.scale.x;
 	return animate( duration, ( k ) => {
 
 		cookie.position.lerpVectors( from, to, ease( k ) );
 		cookie.position.y += Math.sin( Math.PI * k ) * 0.12;
 		cookie.scale.setScalar( THREE.MathUtils.lerp( size, 1, ease( k ) ) );
+		cookie.quaternion.slerpQuaternions( fromQ, FLAT, ease( k ) );
 
 	} );
-		cookie.quaternion.slerpQuaternions( fromQ, FLAT, ease( k ) );
 
 }
 
@@ -302,12 +303,12 @@ function followHand( dt ) {
 	cookie.position.lerp( at, k );
 	cookie.scale.setScalar( THREE.MathUtils.lerp( cookie.scale.x, HOLD_SCALE, k ) );
 
-}
-
 	// tilted up towards the player
 	towards.subVectors( camera.position, cookie.position ).setY( 0 ).normalize();
 	tilted.setFromAxisAngle( towards.cross( UP ).negate().normalize(), HOLD_TILT ).multiply( FLAT );
 	cookie.quaternion.slerp( tilted, k );
+
+}
 
 const flatLook = new THREE.Vector3();
 const floorAt = new THREE.Vector3();
@@ -368,10 +369,10 @@ async function takeOut() {
 
 	const result = { result: resultFor( bakedFor ), seconds: Math.round( bakedFor * 10 ) / 10, real: Math.round( realSeconds() ), temperature: shownTemperature() };
 	bakeLevel.value = bakedFor / BAKE_PERFECT;
-	setState( { baking: false, busy: true } );
 	takingOut = true;
-	showOvenTimer( null );
+	setState( { baking: false, busy: true } );
 	silenceAlarm();
+	showOvenTimer( null );
 	hideGuide();
 
 	// (opening the door lets out a puff of smoke if it's smoky in there)
@@ -381,8 +382,8 @@ async function takeOut() {
 	await moveTray( tray, OVEN_FRONT, { duration: 0.6 } );
 	await moveTray( tray, tray.centre, { duration: 0.9, lift: 0.15 } );
 	await openDoor( false );
-	setState( { busy: false, baked: result } );
 	takingOut = false;
+	setState( { busy: false, baked: result } );
 	showBakeResult( result, bakeAgain );
 
 }
