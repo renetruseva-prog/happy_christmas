@@ -41,7 +41,7 @@ export async function loadKitchen( scene, camera, controls ) {
 			if ( obj.name.startsWith( 'Light_Pendant' ) && obj.isSpotLight ) {
 
 				obj.castShadow = true;
-				obj.shadow.mapSize.set( 2048, 2048 );
+				obj.shadow.mapSize.set( 1024, 1024 ); // (4x cheaper than 2048, and the shadows are soft anyway)
 				obj.shadow.bias = - 0.0005;
 				obj.shadow.normalBias = 0.02; // (stops the stripy self-shadowing on flat sides, like the flour bag's)
 

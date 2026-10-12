@@ -13,8 +13,14 @@ scene.background = new THREE.Color( 0x0d0a08 );
 export const camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.05, 100 );
 camera.position.set( - 0.9, 1.75, 1.85 );
 
-export const renderer = new THREE.WebGPURenderer( { antialias: true } );
-renderer.setPixelRatio( Math.min( window.devicePixelRatio, 2 ) );
+// On a sharp (retina) screen 2x pixels is 4x the work for the same picture, with the glow and
+// the soft shadows on top, so it draws at most 1.5x, and without the extra edge smoothing there
+// (the extra pixels do that job). It also lowers the resolution by itself if the frame rate drops
+// (see adaptResolution below)
+const MAX_RATIO = Math.min( window.devicePixelRatio, 1.5 );
+const MIN_RATIO = 0.6;
+export const renderer = new THREE.WebGPURenderer( { antialias: window.devicePixelRatio < 1.5 } );
+renderer.setPixelRatio( MAX_RATIO );
 renderer.setSize( window.innerWidth, window.innerHeight );
 renderer.toneMapping = THREE.AgXToneMapping;
 renderer.toneMappingExposure = 1.0;
@@ -76,6 +82,38 @@ export function constrainCamera() {
 
 	// and it can't go under the table, into the counters or the tree, or through the floor
 	keepCameraOut( camera );
+
+}
+
+// every frame, with the real time since the last one: if frames take too long for a while, draw
+// with fewer pixels; if they're quick, creep back up. (Only whole stretches of frames count, and
+// not when the page was in the background.)
+let ratio = MAX_RATIO;
+let timeSum = 0;
+let frames = 0;
+let settleFor = 0; // seconds before it may go back up after a change
+
+export function adaptResolution( realDt ) {
+
+	if ( realDt > 0.25 || document.visibilityState !== 'visible' ) return;
+
+	timeSum += realDt;
+	frames ++;
+	settleFor -= realDt;
+	if ( frames < 45 ) return;
+
+	const average = timeSum / frames;
+	timeSum = 0;
+	frames = 0;
+
+	let next = ratio;
+	if ( average > 0.024 ) next = Math.max( MIN_RATIO, ratio * 0.85 ); // slower than about 42 fps
+	else if ( average < 0.0145 && settleFor <= 0 ) next = Math.min( MAX_RATIO, ratio * 1.1 ); // faster than about 69 fps
+	if ( Math.abs( next - ratio ) < 0.01 ) return;
+
+	ratio = next;
+	settleFor = 6;
+	renderer.setPixelRatio( ratio );
 
 }
 

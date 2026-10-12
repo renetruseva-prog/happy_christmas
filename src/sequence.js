@@ -5,6 +5,9 @@
 // moves can be written top to bottom with await.
 const running = [];
 
+// how fast sequences run (1 is as written; 1.5 plays them one and a half times as fast)
+export const pace = { value: 1 };
+
 export function runSequence( steps ) {
 
 	return new Promise( ( resolve ) => running.push( { steps, i: 0, t: 0, started: false, resolve } ) );
@@ -25,7 +28,9 @@ export function until( update ) {
 
 }
 
-export function updateSequences( dt ) {
+export function updateSequences( realDt ) {
+
+	const dt = realDt * pace.value;
 
 	for ( let n = running.length - 1; n >= 0; n -- ) {
 

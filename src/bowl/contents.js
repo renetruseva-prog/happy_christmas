@@ -161,7 +161,27 @@ export class Layer {
 		this.mesh.receiveShadow = true;
 		ctx.scene.add( this.mesh );
 
+		// what doesn't change as the heap grows is worked out once: where each point is in the
+		// dome's outline, and its small clumps (so growing it is just arithmetic)
+		this.d2 = new Float32Array( count );
+		this.outline = new Float32Array( count ); // the lumpy outline: how much the dome falls off at this point
+		this.small = new Float32Array( count ); // the small clumps on the surface
+		for ( let n = 0; n < count; n ++ ) {
+
+			const px = position[ n * 3 ];
+			const pz = position[ n * 3 + 2 ];
+			const dx = px - x;
+			const dz = pz - z;
+			this.d2[ n ] = dx * dx + dz * dz;
+			const phi = Math.atan2( dz, dx );
+			const u = Math.min( Math.sqrt( this.d2[ n ] ) / radius, 1 );
+			this.outline[ n ] = 1 + lumps * u * ( 0.6 * Math.sin( 3 * phi + this.seed ) + 0.4 * Math.sin( 7 * phi + this.seed * 2 ) );
+			this.small[ n ] = clumps * ( Math.sin( px * 310 + this.seed ) * Math.sin( pz * 290 - this.seed ) + 0.5 * Math.sin( ( px + pz ) * 520 + this.seed * 3 ) );
+
+		}
+
 		layers.push( this );
+		this.built = false;
 		this.setGrowth( 0 );
 
 	}
@@ -183,19 +203,27 @@ export class Layer {
 
 	setGrowth( g ) {
 
+		if ( this.built && Math.abs( g - this.growth ) < 0.0005 ) return; // (nothing to change)
 		this.growth = g;
+		this.built = true;
 		this.mesh.visible = g > 0.001;
+		if ( ! this.mesh.visible && this.shown === false ) return; // (and nothing to show)
+		this.shown = this.mesh.visible;
+
 		const { position, color: shade } = this.mesh.geometry.attributes;
+		const y = position.array;
+		const color = shade.array;
+		const { bottom, height, steepness, d2, outline, small, base } = this;
 		for ( let i = 0; i < position.count; i ++ ) {
 
 			// on top of the dome where it's higher, tucked just under the earlier surface where it isn't
-			const dome = this.domeAt( position.getX( i ), position.getZ( i ) );
-			const above = dome - this.base[ i ];
-			position.setY( i, above > 0 ? dome + 0.0005 : this.base[ i ] - 0.004 );
+			const dome = bottom + g * ( height + small[ i ] ) - steepness * d2[ i ] * outline[ i ];
+			const above = dome - base[ i ];
+			y[ i * 3 + 1 ] = above > 0 ? dome + 0.0005 : base[ i ] - 0.004;
 
 			// a little darker where the heap meets what's under it, so its outline reads
-			const s = 0.7 + 0.3 * THREE.MathUtils.clamp( above / 0.008, 0, 1 );
-			shade.setXYZ( i, s, s, s );
+			const s = 0.7 + 0.3 * Math.min( Math.max( above / 0.008, 0 ), 1 );
+			color[ i * 3 ] = color[ i * 3 + 1 ] = color[ i * 3 + 2 ] = s;
 
 		}
 
