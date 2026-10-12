@@ -7,6 +7,7 @@ import { initMixer, updateMixer } from './src/mixer/index.js';
 import { initRolling, updateRolling } from './src/rolling/index.js';
 import { initCutting, updateCutting } from './src/cutting/index.js';
 import { initBaking, updateBaking } from './src/baking/index.js';
+import { addChristmas, updateChristmas } from './src/christmas.js';
 import { initInteraction, updateInteraction } from './src/interaction.js';
 import { trackProgress } from './src/progress.js';
 import { updateLights } from './src/lights.js';
@@ -16,6 +17,7 @@ import './src/ui.js';
 
 const world = await loadKitchen( scene, camera, controls );
 initBowl( world, scene, camera ); // before the ingredients: restoring saved progress uses it
+addChristmas( world.room, scene, camera ); // snow, frost, presents, a snowman...
 initIngredients( world );
 trackProgress();
 initMixer( { scene, room: world.room, camera, controls, canvas: renderer.domElement } ); // after the ingredients: it appears once they're all in
@@ -36,6 +38,7 @@ renderer.setAnimationLoop( ( time ) => {
 	updateLights( t );
 	constrainCamera();
 	controls.update();
+	updateChristmas( dt, t );
 	updateInteraction( dt );
 	updateTweens( dt );
 	updateSequences( dt );
