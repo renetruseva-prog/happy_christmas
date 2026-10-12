@@ -1,6 +1,6 @@
 // how what goes in the bowl looks: flour, sugar, the falling flour stream, egg, and the dough
 import * as THREE from 'three/webgpu';
-import { color, float, mix, mx_noise_float, positionWorld, smoothstep, step, time, uniform, vec3 } from 'three/tsl';
+import { attribute, color, float, mix, mx_noise_float, positionWorld, smoothstep, step, time, uniform, vec3 } from 'three/tsl';
 
 // turns the dough's pattern while it's being mixed (set by mixDough)
 export const swirl = uniform( 0 );
@@ -27,8 +27,10 @@ export function initMaterials() {
 
 	// dough: warm golden beige, mottled; the pattern shifts with `swirl` so it churns while mixing
 	const dough = new THREE.MeshStandardNodeMaterial( { roughness: 0.75, vertexColors: true } );
-	const churn = mx_noise_float( positionWorld.mul( 60 ).add( vec3( swirl.sin().mul( 0.6 ), 0, swirl.cos().mul( 0.6 ) ) ) );
-	dough.colorNode = mix( color( 0xc8975a ), color( 0xebd2a2 ), churn.mul( 0.5 ).add( 0.5 ) ).mul( mx_noise_float( positionWorld.mul( 300 ) ).mul( 0.06 ).add( 0.97 ) );
+	// (the pattern is where the dough started, not where it is: it's carried round as the dough is)
+	const flow = attribute( 'flow', 'vec2' );
+	const churn = mx_noise_float( vec3( flow.x, positionWorld.y, flow.y ).mul( 60 ).add( vec3( swirl.sin().mul( 0.6 ), 0, swirl.cos().mul( 0.6 ) ) ) );
+	dough.colorNode = mix( color( 0xc8975a ), color( 0xebd2a2 ), churn.mul( 0.5 ).add( 0.5 ) ).mul( mx_noise_float( vec3( flow.x, positionWorld.y, flow.y ).mul( 300 ) ).mul( 0.06 ).add( 0.97 ) );
 
 	Object.assign( materials, {
 		flour,

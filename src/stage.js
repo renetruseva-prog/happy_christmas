@@ -13,14 +13,34 @@ scene.background = new THREE.Color( 0x0d0a08 );
 export const camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.05, 100 );
 camera.position.set( - 0.9, 1.75, 1.85 );
 
-// On a sharp (retina) screen 2x pixels is 4x the work for the same picture, with the glow and
-// the soft shadows on top, so it draws at most 1.5x, and without the extra edge smoothing there
-// (the extra pixels do that job). It also lowers the resolution by itself if the frame rate drops
-// (see adaptResolution below)
-const MAX_RATIO = Math.min( window.devicePixelRatio, 1.5 );
-const MIN_RATIO = 0.6;
+// How sharp the picture is drawn. A sharp (retina) screen has 2x pixels, which is 4x the work for
+// the same picture, so it's capped by how many pixels in all it draws (about 3 million: 1.5x on a
+// laptop screen), not by a fixed ratio. That way zooming the page in or out (which changes the
+// ratio and the window size together) keeps the picture just as sharp, and it's worked out again
+// whenever the window changes. It's never below 1x on a normal screen, and drops by itself if the
+// frame rate does (see adaptResolution below)
+const PIXEL_BUDGET = 3e6;
+let quality = 1; // 1 full .. MIN_QUALITY, lowered while frames are slow
+const MIN_QUALITY = 0.4; // (the floor in pixelRatio() is what really stops it)
+
+function sharpRatio() {
+
+	return Math.min( window.devicePixelRatio, Math.max( 1, Math.sqrt( PIXEL_BUDGET / ( window.innerWidth * window.innerHeight ) ) ) );
+
+}
+
+// never below 1 pixel per page pixel (or the screen's own, if it's lower), however slow the frames
+const MIN_RATIO = 1;
+
+function pixelRatio() {
+
+	const sharp = sharpRatio();
+	return Math.max( Math.min( sharp, MIN_RATIO ), sharp * quality );
+
+}
+
 export const renderer = new THREE.WebGPURenderer( { antialias: window.devicePixelRatio < 1.5 } );
-renderer.setPixelRatio( MAX_RATIO );
+renderer.setPixelRatio( pixelRatio() );
 renderer.setSize( window.innerWidth, window.innerHeight );
 renderer.toneMapping = THREE.AgXToneMapping;
 renderer.toneMappingExposure = 1.0;
@@ -48,9 +68,16 @@ window.addEventListener( 'resize', () => {
 
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
+	renderer.setPixelRatio( pixelRatio() ); // (zooming the page changes the window size and the ratio)
 	renderer.setSize( window.innerWidth, window.innerHeight );
 
 } );
+
+// Pinching or Ctrl-scrolling would zoom the whole page (blowing up the picture and the panels)
+// whenever the game doesn't take the gesture itself, as when a cutter is held. The game zooms
+// the view with them instead (or ignores them), and the page stays put.
+window.addEventListener( 'wheel', ( e ) => { if ( e.ctrlKey ) e.preventDefault(); }, { passive: false } );
+for ( const type of [ 'gesturestart', 'gesturechange', 'gestureend' ] ) window.addEventListener( type, ( e ) => e.preventDefault() ); // (Safari)
 
 // ---------- keep the camera inside the kitchen ----------
 const roomBounds = new THREE.Box3( new THREE.Vector3( ...ROOM_MIN ), new THREE.Vector3( ...ROOM_MAX ) );
@@ -85,13 +112,17 @@ export function constrainCamera() {
 
 }
 
-// every frame, with the real time since the last one: if frames take too long for a while, draw
-// with fewer pixels; if they're quick, creep back up. (Only whole stretches of frames count, and
-// not when the page was in the background.)
-let ratio = MAX_RATIO;
+// every frame, with the real time since the last one: if frames stay too slow for a while, draw
+// with fewer pixels, and creep back up once they're as quick as the screen allows. "As quick as the
+// screen allows" is learned (the quickest stretch seen: about 16.7 ms on a 60 Hz screen), because a
+// fixed target would never be reached on a screen that can't go that fast, and the picture would
+// stay low-res for good. It never goes below normal sharpness (1 pixel per page pixel). Only whole
+// stretches of frames count, and not when the page was in the background.
 let timeSum = 0;
 let frames = 0;
 let settleFor = 0; // seconds before it may go back up after a change
+let slowStretches = 0; // slow stretches in a row
+let refresh = 1 / 60; // the quickest a frame has been
 
 export function adaptResolution( realDt ) {
 
@@ -105,15 +136,25 @@ export function adaptResolution( realDt ) {
 	const average = timeSum / frames;
 	timeSum = 0;
 	frames = 0;
+	if ( average > 0.005 ) refresh = Math.min( refresh, average );
 
-	let next = ratio;
-	if ( average > 0.024 ) next = Math.max( MIN_RATIO, ratio * 0.85 ); // slower than about 42 fps
-	else if ( average < 0.0145 && settleFor <= 0 ) next = Math.min( MAX_RATIO, ratio * 1.1 ); // faster than about 69 fps
-	if ( Math.abs( next - ratio ) < 0.01 ) return;
+	const slow = average > Math.max( 0.026, refresh * 1.7 ); // below about 38 fps
+	const quick = average < refresh * 1.15; // as fast as the screen goes
+	slowStretches = slow ? slowStretches + 1 : 0;
 
-	ratio = next;
-	settleFor = 6;
-	renderer.setPixelRatio( ratio );
+	let next = quality;
+	if ( slowStretches >= 2 && pixelRatio() > MIN_RATIO + 0.01 ) {
+
+		next = Math.max( MIN_QUALITY, Math.min( 1, MIN_RATIO / sharpRatio() ), quality * 0.9 ); // (not below where the floor takes over)
+		slowStretches = 0;
+
+	} else if ( quick && settleFor <= 0 && quality < 1 ) next = Math.min( 1, quality * 1.12 );
+
+	if ( Math.abs( next - quality ) < 0.005 ) return;
+
+	quality = next;
+	settleFor = 4;
+	renderer.setPixelRatio( pixelRatio() );
 
 }
 

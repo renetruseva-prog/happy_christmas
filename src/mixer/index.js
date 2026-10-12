@@ -10,7 +10,7 @@ import { showStatus } from '../ui.js';
 import { runSequence, ease, easeOutBack } from '../sequence.js';
 import { loadMixed } from '../progress.js';
 import { TABLE_TOP, thingsOnTable, clearance } from '../table.js';
-import { bowlInfo, contentsTop, mixDough } from '../bowl/index.js';
+import { bowlInfo, contentsTop, mixDough, stirDough } from '../bowl/index.js';
 import { preloadHandTracker } from '../handTracking.js';
 import { HeldTool } from '../heldTool.js';
 import { buildMixer } from './model.js';
@@ -290,6 +290,36 @@ export function initMixer( { scene, room: kitchen, camera: cam, controls, canvas
 
 }
 
+// tells the dough what the mixer is doing to it, so it moves (see bowl/doughBody.js): where the
+// beaters are, how fast they spin, and how fast the mixer moves and goes round the bowl
+const beaterAt = new THREE.Vector3();
+function stir( from, center, dt ) {
+
+	const { group } = mixer;
+	group.updateMatrixWorld( true );
+	const beaters = mixer.beaters.map( ( { beater } ) => {
+
+		beater.getWorldPosition( beaterAt );
+		return { x: beaterAt.x, z: beaterAt.z };
+
+	} );
+
+	const step = Math.max( dt, 1e-4 );
+	const vx = ( group.position.x - from.x ) / step;
+	const vz = ( group.position.z - from.z ) / step;
+	// how fast it goes round the middle: the turn from where it was to where it is
+	const was = Math.atan2( from.z - center.z, from.x - center.x );
+	const now = Math.atan2( group.position.z - center.z, group.position.x - center.x );
+	let orbit = now - was;
+	if ( orbit > Math.PI ) orbit -= Math.PI * 2;
+	if ( orbit < - Math.PI ) orbit += Math.PI * 2;
+	const out = Math.hypot( group.position.x - center.x, group.position.z - center.z );
+	orbit = out > 0.01 ? THREE.MathUtils.clamp( orbit / step, - 12, 12 ) : 0; // (near the middle the angle jumps about)
+
+	stirDough( { beaters, spin: spin / 45, vx, vz, orbit } );
+
+}
+
 export function updateMixer( dt ) {
 
 	if ( ! mixer ) return;
@@ -335,6 +365,7 @@ export function updateMixer( dt ) {
 	tool.updateGuide( gained, dt );
 
 	mixDough( progress, turned * 0.02 );
+	stir( from, center, dt );
 	showStatus( `Mixing the dough · ${ Math.round( progress * 100 ) }%` );
 	if ( progress >= 1 ) finish();
 

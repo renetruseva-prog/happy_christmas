@@ -98,6 +98,8 @@ export class Layer {
 		// the mesh covers the whole bowl; only the part above the earlier surface shows
 		const rings = 18;
 		const segs = 56;
+		this.rings = rings;
+		this.segs = segs;
 		const reach = bowl.radius + Math.hypot( x - bowl.center.x, z - bowl.center.z );
 		const count = 1 + rings * segs;
 		const position = new Float32Array( count * 3 );
@@ -156,6 +158,16 @@ export class Layer {
 		geometry.setAttribute( 'position', new THREE.BufferAttribute( position, 3 ) );
 		geometry.setAttribute( 'color', new THREE.BufferAttribute( new Float32Array( count * 3 ).fill( 1 ), 3 ) );
 		geometry.setIndex( index );
+		// where each point started (x, z): the pattern on the surface stays with it as it's moved about
+		const flow = new Float32Array( count * 2 );
+		for ( let n = 0; n < count; n ++ ) {
+
+			flow[ n * 2 ] = position[ n * 3 ];
+			flow[ n * 2 + 1 ] = position[ n * 3 + 2 ];
+
+		}
+
+		geometry.setAttribute( 'flow', new THREE.BufferAttribute( flow, 2 ) );
 
 		this.mesh = new THREE.Mesh( geometry, material );
 		this.mesh.receiveShadow = true;
@@ -179,6 +191,10 @@ export class Layer {
 			this.small[ n ] = clumps * ( Math.sin( px * 310 + this.seed ) * Math.sin( pz * 290 - this.seed ) + 0.5 * Math.sin( ( px + pz ) * 520 + this.seed * 3 ) );
 
 		}
+
+		this.rest = new Float32Array( count ); // the height of each point, before anything moves it
+		this.above = new Float32Array( count ); // how far it is above what's under it (under 0: hidden)
+		this.body = null; // something that moves the surface about (see doughBody.js)
 
 		layers.push( this );
 		this.built = false;
@@ -210,16 +226,16 @@ export class Layer {
 		if ( ! this.mesh.visible && this.shown === false ) return; // (and nothing to show)
 		this.shown = this.mesh.visible;
 
-		const { position, color: shade } = this.mesh.geometry.attributes;
-		const y = position.array;
+		const { color: shade } = this.mesh.geometry.attributes;
 		const color = shade.array;
-		const { bottom, height, steepness, d2, outline, small, base } = this;
-		for ( let i = 0; i < position.count; i ++ ) {
+		const { bottom, height, steepness, d2, outline, small, base, rest } = this;
+		for ( let i = 0; i < shade.count; i ++ ) {
 
 			// on top of the dome where it's higher, tucked just under the earlier surface where it isn't
 			const dome = bottom + g * ( height + small[ i ] ) - steepness * d2[ i ] * outline[ i ];
 			const above = dome - base[ i ];
-			y[ i * 3 + 1 ] = above > 0 ? dome + 0.0005 : base[ i ] - 0.004;
+			this.above[ i ] = above;
+			rest[ i ] = above > 0 ? dome + 0.0005 : base[ i ] - 0.004;
 
 			// a little darker where the heap meets what's under it, so its outline reads
 			const s = 0.7 + 0.3 * Math.min( Math.max( above / 0.008, 0 ), 1 );
@@ -227,8 +243,22 @@ export class Layer {
 
 		}
 
-		position.needsUpdate = true;
 		shade.needsUpdate = true;
+		this.write();
+
+	}
+
+	// puts the surface where it is now: at rest, or moved about by its body
+	write() {
+
+		const { position, flow } = this.mesh.geometry.attributes;
+		if ( this.body ) {
+
+			this.body.apply( position.array, flow.array );
+			flow.needsUpdate = true;
+
+		} else for ( let i = 0; i < position.count; i ++ ) position.array[ i * 3 + 1 ] = this.rest[ i ];
+		position.needsUpdate = true;
 		this.mesh.geometry.computeVertexNormals();
 
 	}

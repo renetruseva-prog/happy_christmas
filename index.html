@@ -7,18 +7,26 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <style>
       html, body { margin: 0; overflow: hidden; background: #0d0a08; }
+      /* the tutorial and the hover hint share one column at the bottom, so they stack and can
+         never overlap, whatever they say or however small the window is */
+      #bottom-stack {
+        position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+        display: flex; flex-direction: column; align-items: center; gap: 10px;
+        width: max-content; max-width: calc(100vw - 24px); pointer-events: none;
+      }
       #hint {
-        position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%);
-        padding: 8px 16px; border-radius: 999px;
+        max-width: 100%; box-sizing: border-box; text-align: center;
+        padding: 8px 16px; border-radius: 18px;
         background: rgba(20, 12, 8, 0.75); color: #ffe8c8;
-        font: 500 14px/1.2 system-ui, sans-serif; text-transform: capitalize;
+        font: 500 14px/1.25 system-ui, sans-serif; text-transform: capitalize;
         pointer-events: none; opacity: 0; transition: opacity 0.15s;
       }
       #status {
         position: fixed; left: 20px; top: 20px;
-        padding: 8px 16px; border-radius: 999px;
+        max-width: calc(100vw - 40px); box-sizing: border-box;
+        padding: 8px 16px; border-radius: 18px;
         background: rgba(20, 12, 8, 0.75); color: #ffe8c8;
-        font: 500 14px/1.2 system-ui, sans-serif;
+        font: 500 14px/1.25 system-ui, sans-serif;
         pointer-events: none; opacity: 0; transition: opacity 0.3s;
       }
       /* camera mixing: the button to switch it on, and a mirrored preview with the tracked hand */
@@ -31,7 +39,7 @@
       }
       #camera-btn.show { opacity: 1; pointer-events: auto; }
       #camera {
-        position: fixed; right: 20px; bottom: 20px; width: 240px; aspect-ratio: 4 / 3;
+        position: fixed; right: 20px; bottom: 20px; width: min(240px, 34vw); aspect-ratio: 4 / 3;
         border-radius: 12px; overflow: hidden; background: #000;
         box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
         opacity: 0; pointer-events: none; transition: opacity 0.3s;
@@ -47,6 +55,7 @@
       .overlay.show { opacity: 1; pointer-events: auto; }
       .overlay .card {
         width: min(420px, calc(100vw - 32px)); box-sizing: border-box; padding: 28px 28px 22px;
+        max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto;
         border-radius: 20px; background: #2a1a12; color: #ffe8c8; text-align: center;
         font: 400 15px/1.45 system-ui, sans-serif; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
         transform: translateY(12px) scale(0.97); transition: transform 0.3s;
@@ -73,9 +82,10 @@
         pointer-events: none; opacity: 0; transition: opacity 0.3s, transform 0.3s;
       }
       #cookie-counter.show { opacity: 1; transform: translate(-50%, 0); }
-      #cookie-counter .slots { display: flex; gap: 4px; }
+      #cookie-counter .slots { display: flex; gap: 4px; flex: none; }
+      #cookie-counter { white-space: nowrap; }
       #cookie-counter .slot {
-        display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+        display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%;
         box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.35); font-size: 15px;
       }
       #cookie-counter .slot.filled { box-shadow: none; background: #e0a455; animation: pop 0.35s; }
@@ -124,13 +134,14 @@
 
       /* the little tutorial: an icon showing the movement (round a circle, up and down, round a star) */
       #tutorial {
-        position: fixed; left: 50%; bottom: 76px; transform: translate(-50%, 8px);
+        transform: translateY(8px);
+        width: max-content; max-width: min(560px, 100%); box-sizing: border-box;
         display: flex; align-items: center; gap: 14px; padding: 10px 18px 10px 10px;
         border-radius: 18px; background: rgba(20, 12, 8, 0.82); color: #ffe8c8;
         font: 500 14px/1.35 system-ui, sans-serif; pointer-events: none;
         opacity: 0; transition: opacity 0.4s, transform 0.4s;
       }
-      #tutorial.show { opacity: 1; transform: translate(-50%, 0); }
+      #tutorial.show { opacity: 1; transform: none; }
       #tutorial svg { width: 64px; height: 64px; flex: none; }
       #tutorial .track { fill: none; stroke: rgba(255, 232, 200, 0.35); stroke-width: 3; stroke-dasharray: 5 6; }
       #tutorial .arrow { fill: rgba(255, 232, 200, 0.6); }
@@ -140,10 +151,76 @@
         position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
         transform: scaleX(-1); /* like a mirror */
       }
+
+      /* smaller windows, which is also what zooming the page in makes: the top panels move onto
+         their own rows, the keys guide shrinks, and the bottom panels move up out of its way */
+      @media (max-width: 900px) {
+        #cookie-counter, #oven-timer { top: 66px; }
+        #camera-btn { top: 66px; right: 12px; }
+        #status { left: 12px; top: 12px; max-width: calc(100vw - 24px); }
+      }
+      @media (max-width: 960px) {
+        /* the keys guide goes to the right edge, small, so the bottom stays clear */
+        #walk-keys { left: auto; right: 12px; bottom: auto; top: 112px; padding: 6px 8px; border-radius: 10px; }
+        #walk-keys .pad { grid-template-columns: repeat(3, 28px); gap: 3px; }
+        #walk-keys kbd { height: 24px; }
+        #walk-keys p { display: none; }
+      }
+      @media (max-width: 1100px) {
+        /* the camera picture goes under the top buttons instead of the bottom corner */
+        #camera { top: 112px; bottom: auto; right: 12px; width: min(200px, 30vw); }
+      }
+      @media (max-width: 760px) {
+        #bottom-stack { bottom: 12px; }
+        #tutorial { gap: 10px; padding: 8px 12px 8px 8px; }
+        #tutorial svg { width: 48px; height: 48px; }
+      }
+      @media (max-width: 480px) {
+        #status, #hint, #tutorial, #cookie-counter, #oven-timer { font-size: 12px; }
+        #cookie-counter { gap: 8px; padding: 6px 12px; }
+        #cookie-counter .slots { gap: 3px; }
+        #cookie-counter .slot { width: 17px; height: 17px; }
+        #tutorial small { font-size: 11px; }
+        .overlay .card { padding: 20px 18px 16px; }
+        .overlay h2 { font-size: 19px; }
+      }
+      @media (max-height: 520px) {
+        #tutorial small { display: none; }
+        #tutorial svg { width: 40px; height: 40px; }
+      }
     </style>
   </head>
   <body>
-    <div id="hint"></div>
+    <div id="bottom-stack">
+      <div id="tutorial" aria-live="polite">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <!-- going round (mixing) -->
+          <g id="tutorial-circle">
+            <circle class="track" cx="32" cy="32" r="22" />
+            <path class="arrow" d="M54 26 l4 8 l-9 -1 z" />
+          </g>
+          <!-- forward and back (rolling) -->
+          <g id="tutorial-line" style="display: none">
+            <line class="track" x1="32" y1="10" x2="32" y2="54" />
+            <path class="arrow" d="M32 3 l6 8 h-12 z M32 61 l6 -8 h-12 z" />
+          </g>
+          <!-- round a star (cutting cookies) -->
+          <g id="tutorial-star" style="display: none">
+            <path class="track" d="M32,8 L38.5,23.1 L54.8,24.6 L42.5,35.4 L46.1,51.4 L32,43 L17.9,51.4 L21.5,35.4 L9.2,24.6 L25.5,23.1 Z" />
+          </g>
+          <!-- dragging something over (to the oven) -->
+          <g id="tutorial-drag" style="display: none">
+            <line class="track" x1="12" y1="52" x2="50" y2="14" />
+            <path class="arrow" d="M58 6 l-3 12 l-9 -9 z" />
+          </g>
+          <circle id="tutorial-icon" r="5" fill="#ffb35c" stroke="#fff3e6" stroke-width="1.5">
+            <animateMotion id="tutorial-motion" dur="1.6s" repeatCount="indefinite" path="M32,10 a22,22 0 1,1 -0.01,0" />
+          </circle>
+        </svg>
+        <div><b id="tutorial-text"></b><small id="tutorial-small"></small></div>
+      </div>
+      <div id="hint"></div>
+    </div>
     <div id="status"></div>
     <button id="camera-btn" type="button">Mix with your hand (C)</button>
     <div id="camera"><video playsinline muted></video><canvas></canvas></div>
@@ -195,33 +272,6 @@
       </div>
     </div>
 
-    <div id="tutorial" aria-live="polite">
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <!-- going round (mixing) -->
-        <g id="tutorial-circle">
-          <circle class="track" cx="32" cy="32" r="22" />
-          <path class="arrow" d="M54 26 l4 8 l-9 -1 z" />
-        </g>
-        <!-- forward and back (rolling) -->
-        <g id="tutorial-line" style="display: none">
-          <line class="track" x1="32" y1="10" x2="32" y2="54" />
-          <path class="arrow" d="M32 3 l6 8 h-12 z M32 61 l6 -8 h-12 z" />
-        </g>
-        <!-- round a star (cutting cookies) -->
-        <g id="tutorial-star" style="display: none">
-          <path class="track" d="M32,8 L38.5,23.1 L54.8,24.6 L42.5,35.4 L46.1,51.4 L32,43 L17.9,51.4 L21.5,35.4 L9.2,24.6 L25.5,23.1 Z" />
-        </g>
-        <!-- dragging something over (to the oven) -->
-        <g id="tutorial-drag" style="display: none">
-          <line class="track" x1="12" y1="52" x2="50" y2="14" />
-          <path class="arrow" d="M58 6 l-3 12 l-9 -9 z" />
-        </g>
-        <circle id="tutorial-icon" r="5" fill="#ffb35c" stroke="#fff3e6" stroke-width="1.5">
-          <animateMotion id="tutorial-motion" dur="1.6s" repeatCount="indefinite" path="M32,10 a22,22 0 1,1 -0.01,0" />
-        </circle>
-      </svg>
-      <div><b id="tutorial-text"></b><small id="tutorial-small"></small></div>
-    </div>
     <script type="module" src="/main.js"></script>
   </body>
 </html>

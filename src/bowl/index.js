@@ -10,6 +10,7 @@ import { cancelTween } from '../tween.js';
 import { ease } from '../sequence.js';
 import { initContents, bowl, layers, solids, surfaceY, Layer } from './contents.js';
 import { initMaterials, materials, swirl } from './materials.js';
+import { DoughBody } from './doughBody.js';
 import { initParticles, updateParticles, particles } from './particles.js';
 import { setupContainers, pourIntoBowl, restorePour } from './pour.js';
 import { crackEgg, restoreEgg } from './egg.js';
@@ -64,6 +65,7 @@ export function restoreInBowl( root ) {
 
 // ---------- mixing ----------
 let dough = null;
+let body = null; // the dough's soft body: the beaters push it around (see doughBody.js)
 
 // how high the bowl's contents reach at (x, z)
 export function contentsTop( x, z ) {
@@ -97,6 +99,7 @@ export function mixDough( p, turn = 0 ) {
 		}
 
 		dough = new Layer( { x: bowl.center.x, z: bowl.center.z, radius: bowl.radius * 1.2, height: top - floor + 0.008, material: materials.dough, lumps: 0.15, clumps: 0.002, bottom: floor } );
+		body = new DoughBody( dough );
 
 	}
 
@@ -131,8 +134,17 @@ export function emptyBowl() {
 
 }
 
+// what the mixer is doing to the dough this frame: where its beaters are, how fast they spin
+// (0..1), how fast it moves (vx, vz) and goes round the bowl (orbit, radians per second)
+export function stirDough( stir ) {
+
+	body?.stirWith( stir );
+
+}
+
 export function updateBowl( dt ) {
 
 	updateParticles( dt );
+	if ( body && dough.mesh.visible ) body.update( dt );
 
 }
