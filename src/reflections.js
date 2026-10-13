@@ -43,7 +43,9 @@ const BOWL = {
 };
 
 let target = null;
+let reflectNow = null;
 let room = null;
+const later = []; // things made before the picture was taken: [ material, amount ]
 
 export function initReflections( kitchen ) {
 
@@ -89,6 +91,9 @@ export function updateReflections( renderer, scene ) {
 
 	};
 
+	reflectNow = reflect;
+	for ( const [ material, amount ] of later ) reflect( material, amount );
+
 	const done = new Set();
 	room.traverse( ( obj ) => {
 
@@ -112,5 +117,13 @@ export function updateReflections( renderer, scene ) {
 		reflect( material, amount );
 
 	}
+
+}
+
+// something made later on (the icing, the sprinkles): reflects the kitchen too
+export function addReflection( material, amount ) {
+
+	if ( reflectNow ) reflectNow( material, amount );
+	else later.push( [ material, amount ] );
 
 }

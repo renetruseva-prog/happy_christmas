@@ -61,6 +61,14 @@ export function loadBaking() {
 
 }
 
+// the decorating: { decorating, decor: { cookies, spills } } (see decorating/)
+export function loadDecor() {
+
+	const decor = saved.decor && typeof saved.decor === 'object' && ! Array.isArray( saved.decor ) ? saved.decor : {};
+	return { decorating: saved.decorating === true, decor: { cookies: Array.isArray( decor.cookies ) ? decor.cookies : [], spills: Array.isArray( decor.spills ) ? decor.spills : [] } };
+
+}
+
 // whether all the cookies were cut out
 export function loadCut() {
 
@@ -71,11 +79,11 @@ export function loadCut() {
 // save whenever the state changes
 export function trackProgress() {
 
-	subscribe( ( { inBowl, mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, bakeProgress, temperature, baked } ) => {
+	subscribe( ( { inBowl, mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, bakeProgress, temperature, baked, decorating, decor } ) => {
 
 		try {
 
-			localStorage.setItem( KEY, JSON.stringify( { inBowl: inBowl.map( ( r ) => r.userData.id ), mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, bakeProgress, temperature, baked } ) );
+			localStorage.setItem( KEY, JSON.stringify( { inBowl: inBowl.map( ( r ) => r.userData.id ), mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, bakeProgress, temperature, baked, decorating, decor } ) );
 
 		} catch { /* storage unavailable: progress just won't persist */ }
 

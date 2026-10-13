@@ -19,7 +19,7 @@ import { BAKE_PERFECT, UNDERBAKED_UNTIL, BURNT_FROM } from '../config.js';
 import { getState, setState, subscribe } from '../state.js';
 import { showGuide, hideGuide, showOvenTimer, showBakeResult, clock } from '../ui.js';
 import { animate, ease } from '../sequence.js';
-import { loadBaking } from '../progress.js';
+import { loadBaking, loadDecor } from '../progress.js';
 import { cuts, bakeLevel } from '../cutting/cuts.js';
 import { initOven, ovenParts, openDoor, setHeat, showOnDisplay } from './oven.js';
 import { findTray, slotPosition, placeTray, moveTray } from './tray.js';
@@ -384,7 +384,17 @@ async function takeOut() {
 	await openDoor( false );
 	takingOut = false;
 	setState( { busy: false, baked: result } );
-	showBakeResult( result, bakeAgain );
+	// perfect: no card, straight on to decorating (it explains itself at the bottom); anything else
+	// has to be baked again
+	if ( result.result === 'perfect' ) decorate();
+	else showBakeResult( result, { again: bakeAgain, decorate } );
+
+}
+
+// perfectly baked: the tray goes back to the table to decorate them (see decorating/)
+function decorate() {
+
+	setState( { decorating: true } );
 
 }
 
@@ -567,6 +577,7 @@ export function initBaking( { room, camera: cam, controls: ctrl } ) {
 
 			bakeLevel.value = saved.baked.seconds / BAKE_PERFECT;
 			setState( { onTray, baked: saved.baked } );
+			if ( ! loadDecor().decorating ) setTimeout( () => { if ( saved.baked.result === 'perfect' ) decorate(); else showBakeResult( saved.baked, { again: bakeAgain, decorate } ); }, 600 ); // (where they were left)
 
 		} else if ( full && saved.bakeStart !== null ) {
 
@@ -591,6 +602,13 @@ export function initBaking( { room, camera: cam, controls: ctrl } ) {
 		}
 
 	}
+
+}
+
+// the baking tray (see tray.js), for the decorating, which brings it back to the table
+export function bakingTray() {
+
+	return tray;
 
 }
 

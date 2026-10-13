@@ -7,6 +7,7 @@ import { initMixer, updateMixer } from './src/mixer/index.js';
 import { initRolling, updateRolling } from './src/rolling/index.js';
 import { initCutting, updateCutting } from './src/cutting/index.js';
 import { initBaking, updateBaking } from './src/baking/index.js';
+import { initDecorating, updateDecorating } from './src/decorating/index.js';
 import { addChristmas, updateChristmas } from './src/christmas.js';
 import { initInteraction, updateInteraction } from './src/interaction.js';
 import { trackProgress } from './src/progress.js';
@@ -25,6 +26,7 @@ initMixer( { scene, room: world.room, camera, controls, canvas: renderer.domElem
 initRolling( { scene, room: world.room, camera, controls, canvas: renderer.domElement } ); // after the mixer: needs to know if the dough is mixed
 initCutting( { room: world.room, camera, controls } ); // after rolling: cuts the rolled-out dough
 initBaking( { room: world.room, camera, controls } ); // after cutting: bakes the cookies cut out
+initDecorating( { room: world.room } ); // after baking: decorates the cookies that came out perfect
 initInteraction( { camera, canvas: renderer.domElement, interactables: world.interactables } );
 initReflections( world.room ); // the shiny ingredients reflect the kitchen
 
@@ -49,6 +51,7 @@ renderer.setAnimationLoop( ( time ) => {
 	updateRolling( dt );
 	updateCutting( dt );
 	updateBaking( dt );
+	updateDecorating( dt );
 	updateReflections( renderer, scene );
 	render();
 
