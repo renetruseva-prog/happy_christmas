@@ -74,7 +74,7 @@ export function guideShown() {
 }
 
 // the progress box redraws whenever the state changes
-subscribe( ( { inBowl, total, mixed, mixing, doughOut, rolling, rolled, cookies, cut, onTray, baking, baked } ) => {
+subscribe( ( { inBowl, total, mixed, mixing, doughOut, rolling, rolled, cookies, cut, onTray, baking, baked, decorating, decor } ) => {
 
 	if ( mixing || rolling ) return; // they show their own progress
 
@@ -87,7 +87,12 @@ subscribe( ( { inBowl, total, mixed, mixing, doughOut, rolling, rolled, cookies,
 
 	const names = inBowl.map( ( r ) => r.userData.ingredient ).join( ', ' );
 	const left = COOKIE_COUNT - cookies.length;
-	if ( baked ) statusEl.textContent = `${ RESULTS[ baked.result ].status } · press R to start over`;
+	if ( decorating ) {
+
+		const done = ( decor.cookies ?? [] ).filter( ( c ) => c && ( c.ice || c.items?.length ) ).length;
+		statusEl.textContent = `Decorating · ${ done } of ${ cookies.length } cookies decorated`;
+
+	} else if ( baked ) statusEl.textContent = `${ RESULTS[ baked.result ].status } · press R to start over`;
 	else if ( baking ) statusEl.textContent = 'Baking… click the oven to take the cookies out';
 	else if ( cut && onTray.length === cookies.length ) statusEl.textContent = 'Put the baking tray in the oven';
 	else if ( cut ) statusEl.textContent = `Put the cookies on the baking tray · ${ onTray.length }/${ cookies.length }`;
@@ -165,26 +170,40 @@ export function showOvenTimer( seconds, { temperature = 180, smoke = 0, alarm = 
 }
 
 const result = document.getElementById( 'bake-result' );
+const bakeAgainButton = document.getElementById( 'bake-again' );
+const bakeDecorate = document.getElementById( 'bake-decorate' );
 let onAgain = () => {};
-document.getElementById( 'bake-again' ).addEventListener( 'click', () => {
+let onDecorate = () => {};
+bakeAgainButton.addEventListener( 'click', () => {
 
 	result.classList.remove( 'show' );
 	onAgain();
 
 } );
+bakeDecorate.addEventListener( 'click', () => {
+
+	result.classList.remove( 'show' );
+	onDecorate();
+
+} );
 document.getElementById( 'bake-over' ).addEventListener( 'click', () => resetProgress() );
 
-// { result, seconds }; again(): bake another batch
-export function showBakeResult( { result: kind, seconds, real, temperature }, again ) {
+// { result, seconds }; again(): bake another batch; decorate(): on to the icing (perfectly baked
+// cookies only: anything else has to be baked again)
+export function showBakeResult( { result: kind, seconds, real, temperature }, { again, decorate } ) {
 
 	const r = RESULTS[ kind ];
+	const perfect = kind === 'perfect';
 	document.getElementById( 'bake-result-title' ).textContent = r.title;
-	document.getElementById( 'bake-result-text' ).textContent = r.text;
+	document.getElementById( 'bake-result-text' ).textContent = perfect ? r.text : `${ r.text } Only perfectly baked cookies can be decorated: bake the batch again.`;
 	document.getElementById( 'bake-result-seconds' ).textContent = temperature === 180 || ! temperature
 		? `In the oven for ${ Math.round( seconds ) } seconds at 180° · perfect is about ${ BAKE_PERFECT }`
 		: `In the oven for ${ Math.round( real ) } seconds at ${ temperature }°, like ${ Math.round( seconds ) } at 180° · perfect is about ${ BAKE_PERFECT } at 180°`;
 	onAgain = again;
+	onDecorate = decorate;
+	bakeDecorate.hidden = ! perfect;
+	bakeAgainButton.hidden = perfect;
 	result.classList.add( 'show' );
-	document.getElementById( 'bake-again' ).focus();
+	( perfect ? bakeDecorate : bakeAgainButton ).focus();
 
 }
