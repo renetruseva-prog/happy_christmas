@@ -110,6 +110,92 @@
       #bake-again { background: #b3202a; color: #fff3e6; }
       #bake-over { background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
 
+      /* decorating: the tools on the side (at the bottom on a small screen) */
+      #bake-decorate { background: #b3202a; color: #fff3e6; }
+      #decorated-keep { background: #b3202a; color: #fff3e6; }
+      #decorated-over { background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
+      #decorate {
+        position: fixed; left: 16px; top: 50%; width: 208px; box-sizing: border-box;
+        display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 18px;
+        max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto;
+        background: rgba(20, 12, 8, 0.88); color: #ffe8c8; font: 500 13px/1.3 system-ui, sans-serif;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+        opacity: 0; pointer-events: none; transform: translate(-12px, -50%); transition: opacity 0.3s, transform 0.3s;
+      }
+      #decorate.show { opacity: 1; pointer-events: auto; transform: translate(0, -50%); }
+      #decorate h3 { margin: 0; font-size: 15px; color: #fff3e6; }
+      #decorate .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+      #decorate .tools button {
+        display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 4px 8px;
+        border: 0; border-radius: 12px; cursor: pointer; color: inherit; font: inherit; text-align: center;
+        background: rgba(255, 232, 200, 0.08); box-shadow: inset 0 0 0 1.5px transparent;
+      }
+      #decorate .tools button:hover { background: rgba(255, 232, 200, 0.16); }
+      #decorate .tools button.on { background: rgba(255, 179, 92, 0.2); box-shadow: inset 0 0 0 1.5px #ffb35c; }
+      #decorate .tools .sw { width: 26px; height: 18px; display: block; position: relative; }
+      #decorate .sw.icing { border-radius: 50% 50% 45% 55%; background: #f7b7cf; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.12); }
+      #decorate .sw.chips::before, #decorate .sw.chips::after {
+        content: ''; position: absolute; width: 8px; height: 6px; border-radius: 40%; background: #4a2818;
+      }
+      #decorate .sw.chips::before { left: 2px; top: 6px; transform: rotate(-20deg); }
+      #decorate .sw.chips::after { left: 14px; top: 2px; transform: rotate(25deg); }
+      #decorate .sw.sprinkles {
+        background:
+          linear-gradient(35deg, transparent 40%, #ff4d6d 40% 60%, transparent 60%) 0 0 / 9px 9px,
+          linear-gradient(-30deg, transparent 40%, #4cc9f0 40% 60%, transparent 60%) 4px 5px / 11px 11px,
+          linear-gradient(80deg, transparent 40%, #ffd23f 40% 60%, transparent 60%) 2px 2px / 13px 10px;
+      }
+      #decorate .sw.wipe { border-radius: 4px; background: linear-gradient(135deg, #f1d9c3 50%, #c98b8b 50%); }
+      #decorate .icing-opts { display: none; flex-direction: column; gap: 10px; }
+      #decorate .zoom { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #d9bfa0; }
+      #decorate .zoom span { flex: 1; text-align: center; }
+      #decorate .zoom button {
+        min-width: 30px; height: 30px; padding: 0 8px; border: 0; border-radius: 999px; cursor: pointer;
+        background: rgba(255, 232, 200, 0.12); color: #fff3e6; font: 600 15px/1 system-ui, sans-serif;
+      }
+      #decorate .zoom button:hover { background: rgba(255, 232, 200, 0.22); }
+      #decorate .zoom #zoom-fit { font-size: 11px; }
+      #decorate .note { margin: 0; font-size: 11.5px; line-height: 1.35; color: #c9ad8d; }
+      #decorate.icing-on .icing-opts { display: flex; }
+      #decorate #wheel { width: 100%; max-width: 176px; aspect-ratio: 1; align-self: center; border-radius: 50%; cursor: crosshair; touch-action: none; }
+      #decorate #wheel:focus-visible, #decorate button:focus-visible, #decorate input:focus-visible { outline: 2px solid #ffb35c; outline-offset: 2px; }
+      #decorate .current { display: flex; align-items: center; gap: 8px; }
+      #decorate #color-preview { width: 22px; height: 22px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255, 243, 230, 0.8); }
+      #decorate #color-hex { font-variant-numeric: tabular-nums; text-transform: uppercase; color: #fff3e6; }
+      #decorate label { display: grid; gap: 4px; font-size: 12px; color: #d9bfa0; }
+      #decorate input[type=range] { width: 100%; margin: 0; accent-color: #ffb35c; }
+      #decorate #shade {
+        -webkit-appearance: none; appearance: none; height: 14px; border-radius: 999px;
+        background: linear-gradient(90deg, var(--shade-from, #000), var(--shade-to, #fff));
+      }
+      #decorate #shade::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff3e6; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45); }
+      #decorate #shade::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: #fff3e6; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45); }
+      #decorate #swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+      #decorate #swatches button { width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 1.5px rgba(255, 232, 200, 0.35); }
+      #decorate #swatches button.on { box-shadow: 0 0 0 2px #2a1a12, 0 0 0 4px #fff3e6; }
+      #decorate #decorate-done { padding: 10px 14px; border: 0; border-radius: 999px; cursor: pointer; background: #b3202a; color: #fff3e6; font: 600 14px/1.2 system-ui, sans-serif; }
+      body.decorating { cursor: crosshair; }
+      body.decorating #bottom-stack { bottom: calc(var(--dock, 0px) + 28px); }
+      @media (max-width: 900px) { #decorate { width: 176px; left: 10px; } }
+      @media (max-width: 760px) {
+        #decorate {
+          left: 8px; right: 8px; top: auto; bottom: 8px; width: auto; max-height: 48vh; max-height: 48dvh;
+          flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 10px 14px; padding: 10px;
+          transform: translateY(12px);
+        }
+        #decorate.show { transform: none; }
+        #decorate h3, #decorate .note { display: none; }
+        #decorate .zoom { flex: 1 1 100%; }
+        #decorate .tools { flex: 1 1 100%; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+        #decorate .tools .sw { display: none; }
+        #decorate .tools button { padding: 8px 2px; font-size: 12px; }
+        #decorate .icing-opts { flex: 1 1 100%; flex-direction: row; flex-wrap: nowrap; gap: 8px 12px; align-items: center; }
+        #decorate #wheel { max-width: 104px; align-self: flex-start; }
+        #decorate .icing-opts .controls { flex: 1 1 110px; display: flex; flex-direction: column; gap: 8px; }
+        #decorate #decorate-done { flex: 1 1 100%; }
+        body.decorating #bottom-stack { bottom: calc(var(--dock, 0px) + 16px); }
+      }
+
       /* while the cookies are carried to the oven, the mouse is a 3D hand in the room (see
          baking/hand.js), so the normal pointer is hidden while it's showing */
       body.hand-mode { cursor: none !important; }
@@ -269,6 +355,44 @@
           <button id="bake-decorate" type="button" hidden>Decorate the cookies</button>
           <button id="bake-again" type="button">Bake the batch again</button>
           <button id="bake-over" type="button">Start over from the beginning</button>
+        </div>
+      </div>
+    </div>
+
+    <aside id="decorate" aria-label="Decorating tools">
+      <h3>Decorate the cookies</h3>
+      <div class="tools" role="group" aria-label="Tool">
+        <button type="button" data-tool="icing" aria-pressed="false"><i class="sw icing"></i>Piping bag</button>
+        <button type="button" data-tool="chips" aria-pressed="false"><i class="sw chips"></i>Chocolate chips</button>
+        <button type="button" data-tool="sprinkles" aria-pressed="false"><i class="sw sprinkles"></i>Sprinkles</button>
+        <button type="button" data-tool="wipe" aria-pressed="false"><i class="sw wipe"></i>Wipe off</button>
+      </div>
+      <div class="icing-opts">
+        <canvas id="wheel" width="320" height="320" tabindex="0" role="img" aria-label="Colour wheel: drag to pick the icing colour, or use the arrow keys"></canvas>
+        <div class="controls">
+          <div class="current"><span id="color-preview"></span><span id="color-hex"></span></div>
+          <label>Light and dark <input id="shade" type="range" min="5" max="100" value="100" /></label>
+          <div id="swatches" role="group" aria-label="Ready-made colours"></div>
+          <label>Icing thickness <input id="brush" type="range" min="10" max="26" value="17" /></label>
+        </div>
+      </div>
+      <div class="zoom" role="group" aria-label="Zoom">
+        <button id="zoom-out" type="button" aria-label="Zoom out">&minus;</button>
+        <span>Zoom</span>
+        <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+        <button id="zoom-fit" type="button">Whole tray</button>
+      </div>
+      <p class="note">Click a tool (or the real one next to the tray) to pick it up; click the table beside the tray, the tool again, or Esc to put it back. Drag to turn the view, scroll to zoom, right-drag to move it</p>
+      <button id="decorate-done" type="button">All done</button>
+    </aside>
+
+    <div id="decorated-done" class="overlay" role="dialog" aria-modal="true" aria-labelledby="decorated-title">
+      <div class="card">
+        <h2 id="decorated-title">Beautiful cookies!</h2>
+        <p>They look good enough to eat. Merry Christmas!</p>
+        <div class="buttons">
+          <button id="decorated-keep" type="button">Keep decorating</button>
+          <button id="decorated-over" type="button">Start over from the beginning</button>
         </div>
       </div>
     </div>
