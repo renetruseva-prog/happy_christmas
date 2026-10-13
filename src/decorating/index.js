@@ -15,7 +15,7 @@
 //   colorWheel.js  the colour picker
 import * as THREE from 'three/webgpu';
 import { getState, setState, subscribe } from '../state.js';
-import { loadDecor, resetProgress } from '../progress.js';
+import { loadDecor } from '../progress.js';
 import { scene, camera, controls } from '../stage.js';
 import { cuts } from '../cutting/cuts.js';
 import { placeTray, moveTray, slotPosition } from '../baking/tray.js';
@@ -29,6 +29,7 @@ import { IcingStream } from './icing.js';
 import { initLook, Falling, Spills } from './pieces.js';
 import { initProps, setOut, pickUp, putDown, heldProp, updateProps, setIcingColor, props } from './props.js';
 import { colorWheel } from './colorWheel.js';
+import { initShare, openShare, sharing } from './share.js';
 
 // where the tray goes on the table (its middle), and the view that looks down on it and the
 // things set out next to it
@@ -379,7 +380,7 @@ function setPointer( e ) {
 
 function onPointerDown( e ) {
 
-	if ( ! active || e.button !== 0 || e.target !== controls.domElement || getState().busy || doneCard.classList.contains( 'show' ) ) return;
+	if ( ! active || e.button !== 0 || e.target !== controls.domElement || getState().busy || doneCard.classList.contains( 'show' ) || sharing() ) return;
 	setPointer( e );
 
 	// the piping bag and the bowls: picked up with a click (also instead of what's in the hand)
@@ -522,15 +523,28 @@ export function initDecorating( { room: kitchen } ) {
 
 	for ( const button of toolButtons ) button.addEventListener( 'click', () => selectTool( button.dataset.tool ) );
 
+	initShare();
+	const shareButton = document.getElementById( 'decorated-share' );
 	document.getElementById( 'decorate-done' ).addEventListener( 'click', () => {
 
 		if ( dirty ) save();
+		if ( tool ) selectTool( tool ); // (puts down what's in the hand)
+		const any = decors.some( ( d ) => d.decorated );
+		shareButton.disabled = ! any;
+		document.getElementById( 'decorated-note' ).textContent = any ? '' : 'Decorate a cookie first, then you can put it on a Christmas card.';
 		doneCard.classList.add( 'show' );
-		document.getElementById( 'decorated-keep' ).focus();
+		( any ? shareButton : document.getElementById( 'decorated-keep' ) ).focus();
+
+	} );
+
+	// the decorated cookies, on a plate, on a Christmas card
+	shareButton.addEventListener( 'click', () => {
+
+		doneCard.classList.remove( 'show' );
+		openShare( decors.filter( ( d ) => d.decorated ).map( ( d ) => d.cookie ) );
 
 	} );
 	document.getElementById( 'decorated-keep' ).addEventListener( 'click', () => doneCard.classList.remove( 'show' ) );
-	document.getElementById( 'decorated-over' ).addEventListener( 'click', () => resetProgress() );
 	window.addEventListener( 'keydown', ( e ) => {
 
 		if ( e.key !== 'Escape' || ! active ) return;
@@ -578,7 +592,7 @@ export function updateDecorating( dt ) {
 	noticeFor -= dt;
 	if ( getState().busy ) return;
 
-	const busy = doneCard.classList.contains( 'show' );
+	const busy = doneCard.classList.contains( 'show' ) || sharing();
 	const at = busy ? null : workPoint();
 
 	// the piping bag or a bowl, in the hand
