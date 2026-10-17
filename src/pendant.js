@@ -15,7 +15,7 @@ export async function initPendant( room ) {
 	let swing;
 	try {
 
-		swing = await new GLTFLoader().loadAsync( '/models/pendant_swing.glb' );
+		swing = await new GLTFLoader().loadAsync( `${ import.meta.env.BASE_URL }models/pendant_swing.glb` );
 
 	} catch {
 

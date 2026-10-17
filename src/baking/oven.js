@@ -43,7 +43,7 @@ export function initOven( room ) {
 
 		// the swing itself comes from the Blender file (clip 'oven_door_open', hinged at the same
 		// spot); until it has loaded, or if it's missing, the door is turned by code instead
-		new GLTFLoader().loadAsync( '/models/oven_door.glb' ).then( ( { animations } ) => {
+		new GLTFLoader().loadAsync( `${ import.meta.env.BASE_URL }models/oven_door.glb` ).then( ( { animations } ) => {
 
 			const clip = animations.find( ( a ) => a.name === 'oven_door_open' );
 			if ( ! clip ) return;

@@ -7,7 +7,7 @@ import { paperSack } from './paperSack.js';
 
 export async function loadKitchen( scene, camera, controls ) {
 
-	const gltf = await new GLTFLoader().loadAsync( '/models/kitchen.glb' );
+	const gltf = await new GLTFLoader().loadAsync( `${ import.meta.env.BASE_URL }models/kitchen.glb` );
 	const room = gltf.scene;
 	const interactables = []; // everything marked "interactable" in Blender
 
