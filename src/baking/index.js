@@ -359,6 +359,7 @@ async function putInOven() {
 	await moveTray( tray, OVEN_INSIDE, { duration: 0.6 } );
 	await openDoor( false );
 	setState( { busy: false, baking: true, bakeStart: Date.now(), baked: null } );
+	controls.enabled = true; // (the view was pinned while the tray waited to go in)
 	guideBaking();
 
 }
@@ -614,6 +615,10 @@ export function bakingTray() {
 export function updateBaking( dt ) {
 
 	if ( ! tray ) return;
+
+	// the view stays put while the tray is waiting to go in the oven, so it's easy to line it up
+	// (it's let go again once the tray is in, see drop())
+	if ( trayReady() ) controls.enabled = false;
 
 	// a dragged tray follows the mouse just over the counter
 	if ( dragging?.tray ) {
