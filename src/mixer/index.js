@@ -17,6 +17,7 @@ import { buildMixer } from './model.js';
 import { showIntro, introShown } from './intro.js';
 import { SwirlMeter } from './swirl.js';
 import { loop } from '../audio.js';
+import { MIN_SWIRL } from '../config.js';
 
 const UP = new THREE.Vector3( 0, 1, 0 );
 const TABLE_X = [ - 0.72, 0.72 ]; // where on the table it may lie (with a margin to the edges)
@@ -366,7 +367,7 @@ export function updateMixer( dt ) {
 	group.position.y = mixingHeight( group.position.x, group.position.z );
 
 	// it only mixes while it's on AND going round in circles (see swirl.js)
-	const gained = swirl.measure( { center, radius, from, to: group.position, target, dt, on: running } );
+	const gained = swirl.measure( { center, radius, from, to: group.position, target, dt, on: running, minSwirl: tool.usingCamera() ? MIN_SWIRL * 0.5 : MIN_SWIRL } );
 	progress = Math.min( 1, progress + gained );
 	tool.updateGuide( gained, dt );
 

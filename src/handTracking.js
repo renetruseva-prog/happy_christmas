@@ -20,6 +20,9 @@ let starting = null;
 let active = false;
 let lastFrame = - 1;
 let palm = null;
+let lastSeen = 0; // when the hand was last detected (ms)
+const SMOOTH = 0.55; // how much of the new position is taken each detection (the rest is the old one): steadies the jitter
+const GRACE = 450; // ms the hand is still counted as there after a frame where it isn't found
 
 export function isTracking() {
 
@@ -43,6 +46,9 @@ export function preloadHandTracker() {
 			baseOptions: { modelAssetPath: MODEL, delegate: 'GPU' },
 			runningMode: 'VIDEO',
 			numHands: 1,
+			minHandDetectionConfidence: 0.3,
+			minHandPresenceConfidence: 0.3,
+			minTrackingConfidence: 0.3,
 		} ) )
 		.then( ( result ) => { landmarker = result; } )
 		.catch( ( error ) => {
@@ -96,6 +102,7 @@ export function stopHandTracking() {
 
 	active = false;
 	palm = null;
+	lastSeen = 0;
 	stream?.getTracks().forEach( ( track ) => track.stop() ); // turns the camera (and its light) off
 	stream = null;
 	video.srcObject = null;
@@ -111,7 +118,15 @@ export function updateHandTracking() {
 	lastFrame = video.currentTime;
 
 	const hand = landmarker.detectForVideo( video, performance.now() ).landmarks[ 0 ];
-	palm = hand ? { x: 1 - hand[ PALM ].x, y: hand[ PALM ].y } : null;
+	const now = performance.now();
+	if ( hand ) {
+
+		const x = 1 - hand[ PALM ].x;
+		const y = hand[ PALM ].y;
+		palm = palm ? { x: palm.x + ( x - palm.x ) * SMOOTH, y: palm.y + ( y - palm.y ) * SMOOTH } : { x, y };
+		lastSeen = now;
+
+	} else if ( now - lastSeen > GRACE ) palm = null; // (a missed frame or two keeps the last place)
 	drawHand( hand );
 
 }
