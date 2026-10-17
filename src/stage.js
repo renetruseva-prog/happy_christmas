@@ -57,8 +57,7 @@ controls.update();
 
 // glow on the christmas lights, candles and oven
 const renderPipeline = new THREE.RenderPipeline( renderer );
-const scenePass = pass( scene, camera );
-const scenePassColor = scenePass.getTextureNode( 'output' );
+const scenePassColor = pass( scene, camera ).getTextureNode( 'output' );
 // (threshold 2: only things that give off light glow; lower and the lit white bowl glows too,
 // which washes out the colours of everything in it)
 renderPipeline.outputNode = scenePassColor.add( bloom( scenePassColor, 0.35, 0.3, 2 ) );
@@ -156,48 +155,6 @@ export function adaptResolution( realDt ) {
 	quality = next;
 	settleFor = 4;
 	renderer.setPixelRatio( pixelRatio() );
-
-}
-
-// Getting ready for what hasn't been seen yet. The GPU works out how to draw each kind of thing the
-// first time it's drawn, and that can freeze the game for a second right in the middle of an
-// animation (the flour pouring out, the dough, the smoke...). So it's all done at the start,
-// while the welcome card is up: everything that's hidden for now is made visible for the moment
-// it takes to hand it over to be worked out, then hidden again.
-export async function warmUp() {
-
-	await renderer.init();
-
-	const hidden = []; // [ object, how it was ]
-	const empty = []; // instanced things with nothing in them yet: they'd be skipped
-	scene.traverse( ( o ) => {
-
-		if ( ! ( o.isMesh || o.isSprite || o.isPoints || o.isLine ) ) return;
-		if ( o.visible === false || o.isInstancedMesh && o.count === 0 ) hidden.push( [ o, o.visible, o.frustumCulled ] );
-		if ( o.isInstancedMesh && o.count === 0 ) empty.push( o );
-
-	} );
-
-	for ( const [ o ] of hidden ) {
-
-		o.visible = true;
-		o.frustumCulled = false;
-
-	}
-
-	for ( const o of empty ) o.count = 1;
-
-	// (what's to be drawn is picked out right away, before the first wait: so it can all be put back at once)
-	const compiling = scenePass.compileAsync( renderer );
-	for ( const [ o, visible, culled ] of hidden ) {
-
-		o.visible = visible;
-		o.frustumCulled = culled;
-
-	}
-
-	for ( const o of empty ) o.count = 0;
-	await compiling;
 
 }
 
