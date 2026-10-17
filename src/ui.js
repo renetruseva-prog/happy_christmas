@@ -62,6 +62,27 @@ export function showGuide( { text, small = '', motion = 'circle' } ) {
 
 }
 
+// a short message where the instructions show (without the icon); what was there comes back after
+let notice = null;
+export function flashNotice( text, ms = 2500 ) {
+
+	const before = notice ? notice.before : { text: guideText.textContent, small: guideSmall.textContent, shown: guideShown() };
+	clearTimeout( notice?.timer );
+	guideText.textContent = text;
+	guideSmall.textContent = '';
+	guide.classList.add( 'show', 'notice' );
+	notice = { before, timer: setTimeout( () => {
+
+		guide.classList.remove( 'notice' );
+		guideText.textContent = before.text;
+		guideSmall.textContent = before.small;
+		if ( ! before.shown ) guide.classList.remove( 'show' );
+		notice = null;
+
+	}, ms ) };
+
+}
+
 export function hideGuide() {
 
 	guide.classList.remove( 'show' );

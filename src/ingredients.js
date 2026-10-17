@@ -9,6 +9,8 @@ import { VIEWS, currentView, moveCameraTo, lockView } from './views.js';
 import { pace } from './sequence.js';
 import { play } from './audio.js';
 import { addBody } from './physics.js';
+import { burst } from './debris.js';
+import { flashNotice } from './ui.js';
 import { TABLE_TOP } from './table.js';
 
 const POUR_PACE = 1.5; // how much faster than written the ingredient animations play
@@ -101,11 +103,27 @@ export function putBack( root ) {
 	const body = addBody( root, { spin } );
 	root.userData.falling = body;
 	const started = performance.now();
+	const breakable = /^(Egg_|Sugar_Jar)/.test( root.userData.id ); // (it breaks if it hits the table hard)
+	let fastest = 0; // how fast it was falling
 
 	// settled (or been loose long enough, or fallen off): back it goes
 	const check = setInterval( () => {
 
 		if ( root.userData.falling !== body ) return clearInterval( check ); // (picked up again)
+		if ( breakable ) {
+
+			const vy = body.body.linvel().y;
+			if ( - vy < fastest * 0.5 && fastest > 1.2 ) {
+
+				clearInterval( check );
+				return smash( root, body );
+
+			}
+
+			fastest = Math.max( fastest, - vy );
+
+		}
+
 		const age = performance.now() - started;
 		const v = body.body.linvel();
 		const still = age > 600 && Math.hypot( v.x, v.y, v.z ) < 0.05;
@@ -116,6 +134,49 @@ export function putBack( root ) {
 		sendHome( root );
 
 	}, 30 );
+
+}
+
+// it hit the table too hard: it breaks, says so, and is back where it was
+function smash( root, body ) {
+
+	const p = body.body.translation();
+	const at = new THREE.Vector3( p.x, TABLE_TOP + 0.01, p.z );
+	body.remove();
+	root.userData.falling = null;
+	root.visible = false;
+
+	if ( root.userData.action === 'crack' ) {
+
+		burst( at, [
+			{ color: '#f3eadb', count: 14, size: 0.004, flat: 0.25, speed: 1 }, // shell
+			{ color: '#e9dba0', count: 10, size: 0.006, flat: 0.15, speed: 0.8 }, // white
+			{ color: '#e86400', count: 4, size: 0.008, flat: 0.4, speed: 0.5 }, // yolk
+		] );
+		play( 'egg_crack' );
+
+	} else {
+
+		burst( at, [
+			{ color: '#bfe3ee', count: 22, size: 0.005, flat: 0.2, speed: 1.4 }, // glass
+			{ color: '#ffffff', count: 30, size: 0.0025, flat: 0.5, speed: 1 }, // sugar
+		] );
+		play( 'shatter' );
+
+	}
+
+	flashNotice( 'Ouch! Try again.' );
+
+	// a new one is on the shelf again, as it was
+	setTimeout( () => {
+
+		const home = root.userData.home;
+		root.position.copy( home.position );
+		root.quaternion.copy( home.quaternion );
+		root.scale.copy( home.scale );
+		root.visible = true;
+
+	}, 1500 );
 
 }
 

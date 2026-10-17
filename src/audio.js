@@ -53,6 +53,7 @@ export const SOUNDS = {
 	pick: { synth: ( a, at, out ) => tone( a, out, { at, freq: 500, to: 800, length: 0.08, volume: 0.15 } ) },
 	drop: { synth: ( a, at, out ) => { tone( a, out, { at, freq: 200, to: 70, length: 0.18, volume: 0.4 } ); noise( a, out, { at, length: 0.25, volume: 0.15 } ); } },
 	egg_crack: { synth: ( a, at, out ) => { noise( a, out, { at, length: 0.08, volume: 0.35, from: 5000, to: 1500 } ); noise( a, out, { at: at + 0.12, length: 0.12, volume: 0.35, from: 4000, to: 800 } ); } },
+	shatter: { synth: ( a, at, out ) => { noise( a, out, { at, length: 0.25, volume: 0.4, from: 9000, to: 2500 } ); tone( a, out, { at, freq: 2400, to: 1200, length: 0.15, volume: 0.1, type: 'triangle' } ); } },
 	thud: { synth: ( a, at, out ) => tone( a, out, { at, freq: 120, to: 40, length: 0.25, volume: 0.5 } ) },
 	cut: { synth: ( a, at, out ) => { tone( a, out, { at, freq: 300, to: 90, length: 0.12, volume: 0.35, type: 'triangle' } ); noise( a, out, { at, length: 0.1, volume: 0.2, from: 6000, to: 2000 } ); } },
 	tray: { synth: ( a, at, out ) => { tone( a, out, { at, freq: 1200, to: 900, length: 0.25, volume: 0.15, type: 'triangle' } ); tone( a, out, { at, freq: 1800, to: 1300, length: 0.2, volume: 0.08, type: 'triangle' } ); } },
