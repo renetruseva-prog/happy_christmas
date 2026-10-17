@@ -5,12 +5,14 @@
 // window in the door so you can watch the cookies bake
 import * as THREE from 'three/webgpu';
 import { and, positionLocal, positionWorld } from 'three/tsl';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { animate, ease } from '../sequence.js';
 
 const OPEN_ANGLE = 1.45; // how far the door swings down (radians)
 const HEAT = 2.5; // how much brighter the glow gets while baking
 
 let hinge = null; // the door turns around this
+let doorClip = null; // { mixer, action, from, to }: the door's swing, made in Blender (public/models/oven_door.glb)
 let glowLight = null;
 let glowBase = 0;
 let cavityMaterial = null; // the inside, glowing a little when it's hot
@@ -33,10 +35,26 @@ export function initOven( room ) {
 
 		const box = new THREE.Box3().setFromObject( door );
 		hinge = new THREE.Object3D();
+		hinge.name = 'Oven_Door_Hinge'; // (what the clip made in Blender animates)
 		hinge.position.set( ( box.min.x + box.max.x ) / 2, box.min.y, box.min.z );
 		room.add( hinge );
 		room.updateMatrixWorld( true );
 		hinge.attach( door );
+
+		// the swing itself comes from the Blender file (clip 'oven_door_open', hinged at the same
+		// spot); until it has loaded, or if it's missing, the door is turned by code instead
+		new GLTFLoader().loadAsync( '/models/oven_door.glb' ).then( ( { animations } ) => {
+
+			const clip = animations.find( ( a ) => a.name === 'oven_door_open' );
+			if ( ! clip ) return;
+			const mixer = new THREE.AnimationMixer( hinge );
+			const action = mixer.clipAction( clip );
+			action.play();
+			const times = clip.tracks[ 0 ].times;
+			doorClip = { mixer, action, from: times[ 0 ], to: times[ times.length - 1 ] };
+			setDoor( hinge.rotation.x / OPEN_ANGLE );
+
+		} ).catch( () => {} );
 
 	}
 
@@ -113,6 +131,22 @@ function makeInside( room, door, body ) {
 
 }
 
+// the door's swing at p (0 shut .. 1 open): the point in the Blender clip, or turned by code
+function setDoor( p ) {
+
+	if ( ! doorClip ) {
+
+		hinge.rotation.x = p * OPEN_ANGLE;
+		return;
+
+	}
+
+	const { mixer, action, from, to } = doorClip;
+	action.time = THREE.MathUtils.lerp( from, to, p );
+	mixer.update( 0 );
+
+}
+
 // how far open the door is (0 shut .. 1 open)
 export function doorOpen() {
 
@@ -123,10 +157,10 @@ export function doorOpen() {
 export function openDoor( open = true ) {
 
 	if ( ! hinge ) return Promise.resolve();
-	const from = hinge.rotation.x;
-	const to = open ? OPEN_ANGLE : 0;
+	const from = doorOpen();
+	const to = open ? 1 : 0;
 	if ( from === to ) return Promise.resolve();
-	return animate( 0.55, ( k ) => { hinge.rotation.x = THREE.MathUtils.lerp( from, to, ease( k ) ); } );
+	return animate( 0.55, ( k ) => setDoor( THREE.MathUtils.lerp( from, to, doorClip ? k : ease( k ) ) ) ); // (the clip has its own easing)
 
 }
 
