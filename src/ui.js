@@ -2,6 +2,7 @@
 import { subscribe } from './state.js';
 import { resetProgress, isNewGame } from './progress.js';
 import { COOKIE_COUNT, bakeBand } from './config.js';
+import './sounds.js';
 
 // what each baking result is called (see baking/)
 const RESULTS = {

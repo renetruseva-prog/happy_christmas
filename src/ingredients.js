@@ -7,6 +7,7 @@ import { loadProgress } from './progress.js';
 import { isOverBowl, addToBowl, restoreInBowl } from './bowl/index.js';
 import { VIEWS, currentView, moveCameraTo, lockView } from './views.js';
 import { pace } from './sequence.js';
+import { play } from './audio.js';
 
 const POUR_PACE = 1.5; // how much faster than written the ingredient animations play
 
@@ -107,6 +108,7 @@ export async function dropInBowl( root ) {
 	pace.value = POUR_PACE;
 	const before = currentView();
 	await moveCameraTo( VIEWS.pour, { release: false } );
+	if ( root.userData.action === 'crack' ) setTimeout( () => play( 'egg_crack' ), 420 ); // (the shell splits on the second tap, about then)
 	await addToBowl( root );
 	await moveCameraTo( before, { duration: 0.8, release: false } );
 	lockView( false );

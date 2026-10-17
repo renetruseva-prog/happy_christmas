@@ -42,6 +42,20 @@
         opacity: 0; pointer-events: none; transition: opacity 0.2s;
       }
       #camera-btn.show { opacity: 1; pointer-events: auto; }
+      /* sound settings, on the left: music and sounds each get an on/off button and a volume slider */
+      #sound-panel {
+        position: fixed; left: 20px; top: 76px; z-index: 5;
+        display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 14px;
+        background: rgba(20, 12, 8, 0.65); color: #ffe8c8; font: 500 12px/1.2 system-ui, sans-serif;
+      }
+      #sound-panel .row { display: grid; grid-template-columns: 28px 46px 90px; align-items: center; gap: 6px; }
+      #sound-panel button {
+        width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; font-size: 14px; line-height: 1;
+        background: rgba(255, 243, 230, 0.15); color: #fff3e6; cursor: pointer;
+      }
+      #sound-panel button:hover { background: rgba(255, 243, 230, 0.3); }
+      #sound-panel input[type=range] { width: 100%; accent-color: #d9503f; cursor: pointer; }
+      #sound-panel .row.off { opacity: 0.55; }
       #camera {
         position: fixed; right: 20px; bottom: 20px; width: min(240px, 34vw); aspect-ratio: 4 / 3;
         border-radius: 12px; overflow: hidden; background: #000;
@@ -387,6 +401,10 @@
       <div id="hint"></div>
     </div>
     <div id="status"></div>
+    <div id="sound-panel" aria-label="Sound settings">
+      <div class="row" data-bus="music"><button type="button" aria-label="Music on or off">🎵</button><span>Music</span><input type="range" min="0" max="100" step="1" aria-label="Music volume"></div>
+      <div class="row" data-bus="sfx"><button type="button" aria-label="Sounds on or off">🔊</button><span>Sounds</span><input type="range" min="0" max="100" step="1" aria-label="Sounds volume"></div>
+    </div>
     <button id="camera-btn" type="button">Mix with your hand (C)</button>
     <div id="camera"><video playsinline muted></video><canvas></canvas></div>
 

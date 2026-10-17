@@ -16,6 +16,7 @@ import { HeldTool } from '../heldTool.js';
 import { buildMixer } from './model.js';
 import { showIntro, introShown } from './intro.js';
 import { SwirlMeter } from './swirl.js';
+import { loop } from '../audio.js';
 
 const UP = new THREE.Vector3( 0, 1, 0 );
 const TABLE_X = [ - 0.72, 0.72 ]; // where on the table it may lie (with a margin to the edges)
@@ -330,6 +331,10 @@ export function updateMixer( dt ) {
 	turned += spin * dt;
 	for ( const { beater, direction } of mixer.beaters ) beater.rotation.y += direction * spin * dt;
 	mixer.shaker.position.set( ( Math.random() - 0.5 ) * 0.0025, ( Math.random() - 0.5 ) * 0.0015, ( Math.random() - 0.5 ) * 0.0025 ).multiplyScalar( spin / 45 );
+
+	// the motor's sound: only while it's held over the bowl and on (this must run when it isn't
+	// held too, or the sound would never be switched off)
+	loop( 'mixer', running && tool.holding && getState().mixing, 0.8 + spin / 150 );
 
 	if ( ! tool.holding ) return;
 
