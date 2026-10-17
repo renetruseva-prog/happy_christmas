@@ -617,6 +617,14 @@ export function updateDecorating( dt ) {
 	noticeFor -= dt;
 	if ( getState().busy ) return;
 
+	// where the cookies are is checked every frame, not just when decorating started: if the tray
+	// or a cookie is moved after that (a late animation, a different frame rate), what lands on a
+	// cookie still lands where the cookie really is
+	const tray = bakingTray();
+	tray.mesh.updateMatrixWorld( true );
+	paperY = slotPosition( tray, 0 ).y;
+	for ( const decor of decors ) updateFrame( decor );
+
 	const busy = doneCard.classList.contains( 'show' ) || sharing();
 	const at = busy ? null : workPoint();
 
