@@ -1,7 +1,8 @@
 // everything that touches the HTML overlay
 import { subscribe } from './state.js';
 import { resetProgress, isNewGame } from './progress.js';
-import { COOKIE_COUNT, BAKE_PERFECT } from './config.js';
+import { COOKIE_COUNT, bakeBand } from './config.js';
+import './sounds.js';
 
 // what each baking result is called (see baking/)
 const RESULTS = {
@@ -58,6 +59,27 @@ export function showGuide( { text, small = '', motion = 'circle' } ) {
 	guideText.textContent = text;
 	guideSmall.textContent = small;
 	guide.classList.add( 'show' );
+
+}
+
+// a short message where the instructions show (without the icon); what was there comes back after
+let notice = null;
+export function flashNotice( text, ms = 2500 ) {
+
+	const before = notice ? notice.before : { text: guideText.textContent, small: guideSmall.textContent, shown: guideShown() };
+	clearTimeout( notice?.timer );
+	guideText.textContent = text;
+	guideSmall.textContent = '';
+	guide.classList.add( 'show', 'notice' );
+	notice = { before, timer: setTimeout( () => {
+
+		guide.classList.remove( 'notice' );
+		guideText.textContent = before.text;
+		guideSmall.textContent = before.small;
+		if ( ! before.shown ) guide.classList.remove( 'show' );
+		notice = null;
+
+	}, ms ) };
 
 }
 
@@ -190,9 +212,9 @@ export function showOvenTimer( seconds, { temperature = 180, smoke = 0, alarm = 
 // the cookies came out perfectly baked: a banner at the top, for a few seconds
 const bakedToast = document.getElementById( 'baked-toast' );
 let toastTimer = 0;
-export function showPerfectBake( { seconds, real, temperature } ) {
+export function showPerfectBake( { seconds, temperature } ) {
 
-	const at = temperature === 180 || ! temperature ? `${ Math.round( seconds ) } seconds at 180°` : `${ Math.round( real ) } seconds at ${ temperature }°`;
+	const at = `${ seconds } seconds at ${ temperature }°`;
 	document.getElementById( 'baked-toast-text' ).textContent = `${ at }: golden brown and crisp. Time to decorate them!`;
 	bakedToast.classList.add( 'show' );
 	clearTimeout( toastTimer );
@@ -221,15 +243,14 @@ document.getElementById( 'bake-over' ).addEventListener( 'click', () => resetPro
 
 // { result, seconds }; again(): bake another batch; decorate(): on to the icing (perfectly baked
 // cookies only: anything else has to be baked again)
-export function showBakeResult( { result: kind, seconds, real, temperature }, { again, decorate } ) {
+export function showBakeResult( { result: kind, seconds, temperature }, { again, decorate } ) {
 
 	const r = RESULTS[ kind ];
+	const band = bakeBand( temperature );
 	const perfect = kind === 'perfect';
 	document.getElementById( 'bake-result-title' ).textContent = r.title;
 	document.getElementById( 'bake-result-text' ).textContent = perfect ? r.text : `${ r.text } Only perfectly baked cookies can be decorated: bake the batch again.`;
-	document.getElementById( 'bake-result-seconds' ).textContent = temperature === 180 || ! temperature
-		? `In the oven for ${ Math.round( seconds ) } seconds at 180° · perfect is about ${ BAKE_PERFECT }`
-		: `In the oven for ${ Math.round( real ) } seconds at ${ temperature }°, like ${ Math.round( seconds ) } at 180° · perfect is about ${ BAKE_PERFECT } at 180°`;
+	document.getElementById( 'bake-result-seconds' ).textContent = `Baked at ${ temperature }° for ${ seconds } seconds · perfect is ${ band.from }-${ band.to } seconds at that heat`;
 	onAgain = again;
 	onDecorate = decorate;
 	bakeDecorate.hidden = ! perfect;

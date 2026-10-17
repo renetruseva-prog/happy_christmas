@@ -46,11 +46,28 @@ export const COOKIE_COUNT = 6;
 export const CUTTER_SCALE = 0.5;
 export const MAX_SHAPE_RADIUS = 0.036;
 
-// baking: seconds in the oven. Around 20 they're underbaked, 40 is perfect and by 60 they're burnt;
-// taken out before UNDERBAKED_UNTIL they count as underbaked, from BURNT_FROM as burnt
-export const BAKE_PERFECT = 40;
-export const UNDERBAKED_UNTIL = 30;
-export const BURNT_FROM = 50;
+// baking: real seconds in the oven, by the heat they're taken out at. Up to and including `upTo`
+// degrees (so exactly 200° is the first band) the cookies are perfect from `from` to `to` whole
+// seconds: fewer is underbaked, more is burnt
+export const BAKE_BANDS = [
+	{ upTo: 200, from: 38, to: 45 },
+	{ upTo: Infinity, from: 23, to: 27 },
+];
+
+export function bakeBand( temperature ) {
+
+	return BAKE_BANDS.find( ( b ) => temperature <= b.upTo );
+
+}
+
+// whole seconds in the oven and the heat they came out at: 'under', 'perfect' or 'burnt'
+export function bakeResult( seconds, temperature ) {
+
+	const { from, to } = bakeBand( temperature );
+	if ( seconds < from ) return 'under';
+	return seconds <= to ? 'perfect' : 'burnt';
+
+}
 
 // a held ingredient floats this high above the floor and stays within these limits
 export const HOLD_HEIGHT = 1.15;

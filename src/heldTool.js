@@ -3,7 +3,8 @@
 // - your hand instead (webcam): the camera button and C switch between hand and mouse,
 //   and if you chose your hand before, the camera comes back on by itself
 // - Esc puts the tool down
-// - the view is locked, so dragging works the tool instead of turning the view
+// - the view is locked, so dragging works the tool instead of turning the view (or with freeView:
+//   only the left button is the tool's: the wheel still zooms and the right button still moves the view)
 // - the little tutorial: shown when you start, hidden once you're getting on with it,
 //   and back if you stop for a few seconds
 import * as THREE from 'three/webgpu';
@@ -20,10 +21,13 @@ export class HeldTool {
 	// hints: what the hover hint says while holding it: { handMoving, handMissing, mouseOn, mouseOff }
 	// progress(): how far the job is (0..1), so the tutorial knows when you're getting on with it
 	// onEscape(): put it down
-	constructor( { camera, controls, canvas, verb, guide, hints, progress, onEscape } ) {
+	// freeView: the view can still be moved while holding it, just not with the left button
+	constructor( { camera, controls, canvas, verb, guide, hints, progress, onEscape, freeView = false } ) {
 
 		this.camera = camera;
 		this.controls = controls;
+		this.freeView = freeView;
+		this.leftButton = null; // what the left button did before the tool took it
 		this.verb = verb;
 		this.guide = guide;
 		this.hints = hints;
@@ -59,7 +63,15 @@ export class HeldTool {
 	// picked up: the view stops turning (before it's carried over)
 	lockView() {
 
-		this.controls.enabled = false;
+		if ( ! this.freeView ) {
+
+			this.controls.enabled = false;
+			return;
+
+		}
+
+		if ( this.leftButton === null ) this.leftButton = this.controls.mouseButtons.LEFT;
+		this.controls.mouseButtons.LEFT = null;
 
 	}
 
@@ -86,6 +98,13 @@ export class HeldTool {
 	}
 
 	unlockView() {
+
+		if ( this.leftButton !== null ) {
+
+			this.controls.mouseButtons.LEFT = this.leftButton;
+			this.leftButton = null;
+
+		}
 
 		this.controls.enabled = true;
 

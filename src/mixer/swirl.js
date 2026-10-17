@@ -13,12 +13,14 @@ export class SwirlMeter {
 		this.turns = []; // { t, turn } per frame
 		this.clock = 0;
 		this.lastTarget = new THREE.Vector3(); // where the mouse/hand pointed last frame
+		this.lastMoved = - 1; // when it last moved (the hand's position only updates with each camera picture, so a frame without a new one isn't standing still)
 
 	}
 
 	reset() {
 
 		this.turns.length = 0;
+		this.lastMoved = - 1;
 
 	}
 
@@ -27,7 +29,7 @@ export class SwirlMeter {
 	// It only counts when it's on, going round fast enough, not right in the middle (where angles
 	// jump around), and the mouse/hand is moving right now (not the mixer, which glides on for a
 	// moment after you stop).
-	measure( { center, radius, from, to, target, dt, on } ) {
+	measure( { center, radius, from, to, target, dt, on, minSwirl = MIN_SWIRL } ) {
 
 		this.clock += dt;
 		const before = Math.atan2( from.z - center.z, from.x - center.x );
@@ -39,10 +41,11 @@ export class SwirlMeter {
 		while ( this.turns.length && this.turns[ 0 ].t < this.clock - WINDOW ) this.turns.shift();
 		const rate = Math.abs( this.turns.reduce( ( sum, f ) => sum + f.turn, 0 ) ) / WINDOW;
 
-		const moving = dt > 0 && Math.hypot( target.x - this.lastTarget.x, target.z - this.lastTarget.z ) / dt > 0.02;
+		if ( dt > 0 && Math.hypot( target.x - this.lastTarget.x, target.z - this.lastTarget.z ) / dt > 0.02 ) this.lastMoved = this.clock;
+		const moving = this.clock - this.lastMoved < 0.2;
 		this.lastTarget.copy( target );
 
-		return on && moving ? Math.max( 0, rate - MIN_SWIRL ) * distance * dt / MIX_DISTANCE : 0;
+		return on && moving ? Math.max( 0, rate - minSwirl ) * distance * dt / MIX_DISTANCE : 0;
 
 	}
 

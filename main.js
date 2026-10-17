@@ -1,5 +1,5 @@
 // entry point: builds the stage, loads the kitchen and runs the frame loop
-import { renderer, scene, camera, controls, constrainCamera, adaptResolution, render, warmUp } from './src/stage.js';
+import { renderer, scene, camera, controls, constrainCamera, adaptResolution, render } from './src/stage.js';
 import { loadKitchen } from './src/kitchen.js';
 import { initIngredients } from './src/ingredients.js';
 import { initBowl, updateBowl } from './src/bowl/index.js';
@@ -15,9 +15,15 @@ import { updateLights } from './src/lights.js';
 import { updateTweens } from './src/tween.js';
 import { updateSequences } from './src/sequence.js';
 import { initReflections, updateReflections } from './src/reflections.js';
+import { initPhysics, stepPhysics } from './src/physics.js';
+import { initDebris, updateDebris } from './src/debris.js';
+import { initPendant, updatePendant } from './src/pendant.js';
 import './src/ui.js';
 
 const world = await loadKitchen( scene, camera, controls );
+await initPhysics( world.room ); // the table, the bowl and the floor that things can fall on
+initDebris( scene ); // what's left when something breaks
+await initPendant( world.room ); // the lamp over the table swings when it's knocked
 addChristmas( world.room, scene, camera ); // snow, frost, presents, a snowman...
 initBowl( world, scene, camera ); // before the ingredients: restoring saved progress uses it
 initIngredients( world );
@@ -29,8 +35,6 @@ initBaking( { room: world.room, camera, controls } ); // after cutting: bakes th
 initDecorating( { room: world.room } ); // after baking: decorates the cookies that came out perfect
 initInteraction( { camera, canvas: renderer.domElement, interactables: world.interactables } );
 initReflections( world.room ); // the shiny ingredients reflect the kitchen
-
-warmUp(); // the GPU works out how to draw what's still hidden now, not in the middle of an animation
 
 let lastTime = 0;
 
@@ -46,6 +50,9 @@ renderer.setAnimationLoop( ( time ) => {
 	constrainCamera();
 	controls.update();
 	updateInteraction( dt );
+	stepPhysics( dt );
+	updateDebris( dt );
+	updatePendant( dt );
 	updateTweens( dt );
 	updateSequences( dt );
 	updateBowl( dt );

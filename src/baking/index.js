@@ -4,18 +4,18 @@
 // when you're close to it. When they're all on the tray, the view moves over to the tray and the
 // oven, and the player drags the tray into the oven (its door opens when the tray is picked up),
 // and the hand goes away when the baking starts. Then it's up
-// to them to take the cookies out in time (click the oven): around 20 seconds they're
-// underbaked, 40 is perfect, and by 60 they're burnt (smoke starts coming out before that). How
+// to them to take the cookies out in time (click the oven): by real seconds in the oven and the
+// heat they come out at (see BAKE_BANDS in config.js) they're underbaked, perfect or burnt
+// (smoke starts coming out as they start to burn). How
 // they turned out shows on the cookies and on a card, which also offers to bake a new batch.
-// The oven's knob sets the heat: hotter bakes faster (and the fire burns higher), cooler slower;
-// the times above are at 180°. When they burn, smoke pours out and the smoke alarm goes off, and
+// The oven's knob sets the heat: hotter has a shorter perfect window (and the fire burns higher). When they burn, smoke pours out and the smoke alarm goes off, and
 // the clock is hard to read through the smoke: wave the mouse over it to clear it.
 //   oven.js  the door, the glow and the clock    tray.js  the baking tray    knob.js  the knob
 //   alarm.js  the smoke alarm
 //   flames.js and smoke.js  the fire in the oven and the smoke when they burn (Shadertoy shaders,
 //   ported in shaders/)
 import * as THREE from 'three/webgpu';
-import { BAKE_PERFECT, UNDERBAKED_UNTIL, BURNT_FROM } from '../config.js';
+import { bakeBand, bakeResult } from '../config.js';
 import { getState, setState, subscribe } from '../state.js';
 import { showGuide, hideGuide, showOvenTimer, showBakeResult, showPerfectBake, clock } from '../ui.js';
 import { animate, ease } from '../sequence.js';
@@ -25,7 +25,7 @@ import { initOven, ovenParts, openDoor, setHeat, showOnDisplay } from './oven.js
 import { findTray, slotPosition, placeTray, moveTray } from './tray.js';
 import { initSmoke, updateSmoke, smokeLevel, overSmoke, puffSmoke } from './smoke.js';
 import { initFlames, updateFlames, flareLevel } from './flames.js';
-import { initKnob, hitsKnob, turnKnob, setTemperature, shownTemperature, heatLevel, bakeSpeed, NORMAL } from './knob.js';
+import { initKnob, hitsKnob, turnKnob, setTemperature, shownTemperature, heatLevel, NORMAL } from './knob.js';
 import { setAlarm, silenceAlarm } from './alarm.js';
 import { VIEWS } from '../views.js';
 import { enableWalking, updateWalking, walkPose, reachPoint, isBlocked } from '../walking.js';
@@ -65,9 +65,6 @@ let notice = null; // a short message for the hover hint, and for how long
 let noticeFor = 0;
 const trayAt = new THREE.Vector3(); // where a dragged tray is going
 let shown = ''; // what the oven's display shows now
-let bakedFor = 0; // how long they've baked, in seconds as if at 180° (the knob makes it go faster or slower)
-let bakeTick = null; // the real time (performance.now) of the last frame it baked in
-let saveIn = 0; // seconds until that's saved again
 let knobShownFor = 0; // the display shows the temperature for a moment after the knob's turned
 const SMOKE_ALARM = 0.3; // the alarm goes off when the smoke's this thick
 
@@ -77,19 +74,20 @@ const trayPlane = new THREE.Plane( UP, - TRAY_HEIGHT );
 const carryAt = new THREE.Vector3();
 
 // ---------- helpers ----------
-// how long they've been in, on the clock
+// how long they've been in, in whole real seconds: the number on the oven's clock, and the one in
+// the result. From the wall clock (bakeStart is saved, so a refresh doesn't change it), not from
+// the frames, which are capped and slow
 function realSeconds() {
 
 	const { bakeStart } = getState();
-	return bakeStart === null ? 0 : ( Date.now() - bakeStart ) / 1000;
+	return bakeStart === null ? 0 : Math.max( 0, Math.floor( ( Date.now() - bakeStart ) / 1000 ) );
 
 }
 
-function resultFor( s ) {
+// how far along they are, where 1 is the start of perfect at the heat the dial shows
+function bakeProgress() {
 
-	if ( s < UNDERBAKED_UNTIL ) return 'under';
-	if ( s < BURNT_FROM ) return 'perfect';
-	return 'burnt';
+	return realSeconds() / bakeBand( shownTemperature() ).from;
 
 }
 
@@ -360,16 +358,17 @@ async function putInOven() {
 	await moveTray( tray, OVEN_FRONT, { duration: 0.5 } );
 	await moveTray( tray, OVEN_INSIDE, { duration: 0.6 } );
 	await openDoor( false );
-	bakedFor = 0;
-	setState( { busy: false, baking: true, bakeStart: Date.now(), bakeProgress: { seconds: 0, at: Date.now() }, baked: null } );
+	setState( { busy: false, baking: true, bakeStart: Date.now(), baked: null } );
 	guideBaking();
 
 }
 
 async function takeOut() {
 
-	const result = { result: resultFor( bakedFor ), seconds: Math.round( bakedFor * 10 ) / 10, real: Math.round( realSeconds() ), temperature: shownTemperature() };
-	bakeLevel.value = bakedFor / BAKE_PERFECT;
+	const seconds = realSeconds();
+	const temperature = shownTemperature();
+	const result = { result: bakeResult( seconds, temperature ), seconds, temperature };
+	bakeLevel.value = bakeProgress();
 	if ( result.result === 'perfect' ) showPerfectBake( result ); // (at once: they know it went right)
 	takingOut = true;
 	setState( { baking: false, busy: true } );
@@ -404,7 +403,7 @@ function decorate() {
 function bakeAgain() {
 
 	bakeLevel.value = 0;
-	setState( { baked: null, bakeStart: null, bakeProgress: null } );
+	setState( { baked: null, bakeStart: null } );
 	guideTray();
 
 }
@@ -438,7 +437,7 @@ function guideTray() {
 
 function guideBaking() {
 
-	showGuide( { text: 'Keep an eye on the clock!', small: `About ${ BAKE_PERFECT } seconds at ${ NORMAL }° makes them perfect: turn the knob for hotter (faster) or cooler (slower). Click the oven to take them out`, motion: 'circle' } );
+	showGuide( { text: 'Keep an eye on the clock!', small: `${ bakeBand( NORMAL ).from }-${ bakeBand( NORMAL ).to } seconds at ${ NORMAL }° makes them perfect (${ bakeBand( 250 ).from }-${ bakeBand( 250 ).to } above 200°). Click the oven to take them out`, motion: 'circle' } );
 	setTimeout( () => { if ( getState().baking ) hideGuide(); }, 9000 );
 
 }
@@ -577,7 +576,7 @@ export function initBaking( { room, camera: cam, controls: ctrl } ) {
 		const full = onTray.length === cuts.length;
 		if ( full && saved.baked ) {
 
-			bakeLevel.value = saved.baked.seconds / BAKE_PERFECT;
+			bakeLevel.value = saved.baked.seconds / bakeBand( saved.baked.temperature ?? NORMAL ).from;
 			setState( { onTray, baked: saved.baked } );
 			if ( ! loadDecor().decorating ) setTimeout( () => { if ( saved.baked.result === 'perfect' ) decorate(); else showBakeResult( saved.baked, { again: bakeAgain, decorate } ); }, 600 ); // (where they were left)
 
@@ -585,9 +584,7 @@ export function initBaking( { room, camera: cam, controls: ctrl } ) {
 
 			// still in the oven: it kept baking while the page was away
 			placeTray( tray, OVEN_INSIDE );
-			const { seconds = 0, at = saved.bakeStart } = saved.bakeProgress ?? {};
-			bakedFor = seconds + ( Date.now() - at ) / 1000 * bakeSpeed( shownTemperature() );
-			setState( { onTray, baking: true, bakeStart: saved.bakeStart, bakeProgress: { seconds: bakedFor, at: Date.now() } } );
+			setState( { onTray, baking: true, bakeStart: saved.bakeStart } );
 
 		} else {
 
@@ -668,37 +665,18 @@ export function updateBaking( dt ) {
 
 	}
 
-	// in the oven: they bake faster the hotter it is (saved now and then, for a refresh)
+	// in the oven: the clock is the real time since they went in (see realSeconds)
 	const { baking } = getState();
-	if ( baking ) {
-
-		// by the real clock, not by the frames: a slow frame must not make the oven slow (frame times
-		// are capped, so counting them would bake for less time than the clock says). And at the
-		// temperature the dial shows, so 180° bakes at exactly the normal speed
-		const now = performance.now();
-		const elapsed = bakeTick === null ? dt : ( now - bakeTick ) / 1000;
-		bakeTick = now;
-		bakedFor += elapsed * bakeSpeed( shownTemperature() );
-		bakeLevel.value = bakedFor / BAKE_PERFECT;
-		saveIn -= dt;
-		if ( saveIn <= 0 ) {
-
-			saveIn = 1;
-			setState( { bakeProgress: { seconds: bakedFor, at: Date.now() } } );
-
-		}
-
-	}
-
-	if ( ! baking ) bakeTick = null;
-	const s = baking ? bakedFor : 0;
+	const s = baking ? realSeconds() : 0;
+	const band = bakeBand( shownTemperature() );
+	if ( baking ) bakeLevel.value = bakeProgress();
 
 	// the oven's display: the temperature for a moment after the knob's turned (and whenever
 	// it's not baking), otherwise the clock
 	knobShownFor -= dt;
 	const showKnob = dragging?.knob || knobShownFor > 0 || ! baking;
-	const text = showKnob ? `${ shownTemperature() }°` : clock( realSeconds() );
-	const warn = ! showKnob && s >= BURNT_FROM;
+	const text = showKnob ? `${ shownTemperature() }°` : clock( s );
+	const warn = ! showKnob && s > band.to;
 	if ( text + warn !== shown ) {
 
 		shown = text + warn;
@@ -713,13 +691,13 @@ export function updateBaking( dt ) {
 	updateFlames( dt, { target: baking ? 1 : 0, hot: heatLevel(), ray: raycaster.ray, overOven } );
 	setHeat( ( baking ? 0.4 + 0.9 * heatLevel() : 0 ) + flareLevel(), performance.now() / 1000 );
 
-	// smoke (a Shadertoy shader too, see shaders/smoke.js): from 45 seconds, when they start to
-	// burn, thicker and darker until they're black; it clears once they're out, or for a while
+	// smoke (a Shadertoy shader too, see shaders/smoke.js): from the last perfect second, as they
+	// start to burn, thicker and darker until they're black; it clears once they're out, or for a while
 	// when it's waved away. Thick smoke sets off the alarm and hides the clock
-	const smoking = baking ? THREE.MathUtils.clamp( ( s - ( BURNT_FROM - 5 ) ) / 15, 0, 1 ) : 0;
-	updateSmoke( dt, { target: smoking, darkness: THREE.MathUtils.clamp( ( s - BURNT_FROM ) / 10, 0, 1 ), ray: raycaster.ray, camera } );
+	const smoking = baking ? THREE.MathUtils.clamp( ( s - ( band.to - 1 ) ) / 15, 0, 1 ) : 0;
+	updateSmoke( dt, { target: smoking, darkness: THREE.MathUtils.clamp( ( s - band.to ) / 10, 0, 1 ), ray: raycaster.ray, camera } );
 	const smoke = smokeLevel();
 	setAlarm( baking && smoke > SMOKE_ALARM ); // (only while it's baking: once the cookies are out it's quiet at once)
-	if ( baking ) showOvenTimer( realSeconds(), { temperature: shownTemperature(), smoke, alarm: smoke > SMOKE_ALARM } );
+	if ( baking ) showOvenTimer( s, { temperature: shownTemperature(), smoke, alarm: smoke > SMOKE_ALARM } );
 
 }

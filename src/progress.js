@@ -1,5 +1,6 @@
 // saves how far the player got in the browser, so a refresh doesn't reset it
 import { subscribe } from './state.js';
+import { INGREDIENTS } from './config.js';
 
 const KEY = 'happy-christmas-progress';
 
@@ -48,13 +49,12 @@ export function loadCookies() {
 
 }
 
-// how far the baking got: { onTray, bakeStart, bakeProgress, temperature, baked } (see state.js)
+// how far the baking got: { onTray, bakeStart, temperature, baked } (see state.js)
 export function loadBaking() {
 
 	return {
 		onTray: Array.isArray( saved.onTray ) ? saved.onTray.filter( Number.isInteger ) : [],
 		bakeStart: typeof saved.bakeStart === 'number' ? saved.bakeStart : null,
-		bakeProgress: typeof saved.bakeProgress?.seconds === 'number' ? saved.bakeProgress : null,
 		temperature: typeof saved.temperature === 'number' ? saved.temperature : null,
 		baked: saved.baked?.result ? saved.baked : null,
 	};
@@ -86,11 +86,11 @@ export function isNewGame() {
 // save whenever the state changes
 export function trackProgress() {
 
-	subscribe( ( { inBowl, mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, bakeProgress, temperature, baked, decorating, decor } ) => {
+	subscribe( ( { inBowl, mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, temperature, baked, decorating, decor } ) => {
 
 		try {
 
-			localStorage.setItem( KEY, JSON.stringify( { inBowl: inBowl.map( ( r ) => r.userData.id ), mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, bakeProgress, temperature, baked, decorating, decor } ) );
+			localStorage.setItem( KEY, JSON.stringify( { inBowl: inBowl.map( ( r ) => r.userData.id ), mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, temperature, baked, decorating, decor } ) );
 
 		} catch { /* storage unavailable: progress just won't persist */ }
 
@@ -109,3 +109,42 @@ export function resetProgress() {
 	location.reload();
 
 }
+
+// testing cheat: Shift+B jumps to a batch of 6 cookies cut and ready on the baking tray, then
+// reloads (not mentioned anywhere in the game)
+function readyBatch() {
+
+	const cookies = [];
+	for ( let i = 0; i < 6; i ++ ) {
+
+		const cx = ( i % 3 - 1 ) * 0.065;
+		const cz = ( Math.floor( i / 3 ) - 0.5 ) * 0.06;
+		const points = [];
+		for ( let k = 0; k < 10; k ++ ) {
+
+			const a = ( - 162 + 36 * k ) * Math.PI / 180;
+			const r = k % 2 === 0 ? 0.025 : 0.0115;
+			points.push( [ + ( cx + Math.cos( a ) * r ).toFixed( 4 ), + ( cz + Math.sin( a ) * r ).toFixed( 4 ) ] );
+
+		}
+
+		cookies.push( { shape: 'star', points } );
+
+	}
+
+	return { inBowl: Object.keys( INGREDIENTS ), mixed: true, doughOut: true, rolled: true, cookies, cut: true, onTray: [ 0, 1, 2, 3, 4, 5 ], bakeStart: null, temperature: 180, baked: null, decorating: false, decor: {} };
+
+}
+
+window.addEventListener( 'keydown', ( e ) => {
+
+	if ( e.code !== 'KeyB' || ! e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.repeat ) return;
+	if ( e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement ) return;
+	try {
+
+		localStorage.setItem( KEY, JSON.stringify( readyBatch() ) );
+		location.reload();
+
+	} catch { /* storage unavailable */ }
+
+} );

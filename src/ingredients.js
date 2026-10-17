@@ -7,6 +7,12 @@ import { loadProgress } from './progress.js';
 import { isOverBowl, addToBowl, restoreInBowl } from './bowl/index.js';
 import { VIEWS, currentView, moveCameraTo, lockView } from './views.js';
 import { pace } from './sequence.js';
+import { play } from './audio.js';
+import { addBody } from './physics.js';
+import { burst } from './debris.js';
+import { swingPendant } from './pendant.js';
+import { flashNotice } from './ui.js';
+import { TABLE_TOP } from './table.js';
 
 const POUR_PACE = 1.5; // how much faster than written the ingredient animations play
 
@@ -81,11 +87,102 @@ export function pickUp( root ) {
 	const { busy, inBowl } = getState();
 	if ( busy || inBowl.includes( root ) ) return;
 	cancelTween( root );
+	root.userData.falling?.remove(); // (picked up again while it was still tumbling)
+	root.userData.falling = null;
 	setState( { held: root } );
 
 }
 
+// let go of an ingredient away from the bowl: it drops onto the table and tumbles (physics), then
+// goes back where it came from. Resting on the table already: straight back.
 export function putBack( root ) {
+
+	const low = new THREE.Box3().setFromObject( root ).min.y;
+	if ( low < TABLE_TOP + 0.05 ) return sendHome( root );
+
+	const spin = new THREE.Vector3( Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5 ).multiplyScalar( 3 );
+	const body = addBody( root, { spin } );
+	root.userData.falling = body;
+	const started = performance.now();
+	const breakable = /^(Egg_|Sugar_Jar)/.test( root.userData.id ); // (it breaks if it hits the table hard)
+	let fastest = 0; // how fast it was falling
+
+	// settled (or been loose long enough, or fallen off): back it goes
+	const check = setInterval( () => {
+
+		if ( root.userData.falling !== body ) return clearInterval( check ); // (picked up again)
+		if ( breakable ) {
+
+			const vy = body.body.linvel().y;
+			if ( - vy < fastest * 0.5 && fastest > 1.2 ) {
+
+				clearInterval( check );
+				return smash( root, body );
+
+			}
+
+			fastest = Math.max( fastest, - vy );
+
+		}
+
+		const age = performance.now() - started;
+		const v = body.body.linvel();
+		const still = age > 600 && Math.hypot( v.x, v.y, v.z ) < 0.05;
+		if ( ! still && age < 3000 && root.position.y > - 1 ) return;
+		clearInterval( check );
+		body.remove();
+		root.userData.falling = null;
+		sendHome( root );
+
+	}, 30 );
+
+}
+
+// it hit the table too hard: it breaks, says so, and is back where it was
+function smash( root, body ) {
+
+	const p = body.body.translation();
+	const at = new THREE.Vector3( p.x, TABLE_TOP + 0.01, p.z );
+	body.remove();
+	root.userData.falling = null;
+	root.visible = false;
+
+	if ( root.userData.action === 'crack' ) {
+
+		burst( at, [
+			{ color: '#f3eadb', count: 14, size: 0.004, flat: 0.25, speed: 1 }, // shell
+			{ color: '#e9dba0', count: 10, size: 0.006, flat: 0.15, speed: 0.8 }, // white
+			{ color: '#e86400', count: 4, size: 0.008, flat: 0.4, speed: 0.5 }, // yolk
+		] );
+		play( 'egg_crack' );
+
+	} else {
+
+		burst( at, [
+			{ color: '#bfe3ee', count: 22, size: 0.005, flat: 0.2, speed: 1.4 }, // glass
+			{ color: '#ffffff', count: 30, size: 0.0025, flat: 0.5, speed: 1 }, // sugar
+		] );
+		play( 'shatter' );
+
+	}
+
+	swingPendant( 1 ); // (the crash shakes the table: the lamp swings)
+	flashNotice( 'Ouch! Try again.' );
+
+	// a new one is on the shelf again, as it was
+	setTimeout( () => {
+
+		const home = root.userData.home;
+		root.position.copy( home.position );
+		root.quaternion.copy( home.quaternion );
+		root.scale.copy( home.scale );
+		root.visible = true;
+
+	}, 1500 );
+
+}
+
+function sendHome( root ) {
 
 	const home = root.userData.home;
 	root.quaternion.copy( home.quaternion );
@@ -107,6 +204,7 @@ export async function dropInBowl( root ) {
 	pace.value = POUR_PACE;
 	const before = currentView();
 	await moveCameraTo( VIEWS.pour, { release: false } );
+	if ( root.userData.action === 'crack' ) setTimeout( () => play( 'egg_crack' ), 420 ); // (the shell splits on the second tap, about then)
 	await addToBowl( root );
 	await moveCameraTo( before, { duration: 0.8, release: false } );
 	lockView( false );

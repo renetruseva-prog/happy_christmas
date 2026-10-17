@@ -12,6 +12,8 @@
 
 const STEP = 1 / 120; // fixed time steps, so it's steady at any frame rate
 const MAX_STEPS = 4;
+const MAX_SPEED = 0.45; // how fast the mixer counts as moving, at most (a mouse can fling it much faster, which would throw the dough about)
+const MAX_UP = 0.022; // and how far the surface can rise or sink from where it rests, at most (metres)
 
 const STIFF = 230; // how hard each point is pulled back to its rest height
 const DAMP = 7; // how quickly the wobbling dies down (low: jelly-like, high: like clay)
@@ -126,6 +128,10 @@ export class DoughBody {
 		const { x: cx, z: cz } = this.layer;
 		const grown = this.layer.growth;
 		this.time += dt;
+		const fast = stir ? Math.hypot( stir.vx, stir.vz ) : 0;
+		const slow = fast > MAX_SPEED ? MAX_SPEED / fast : 1;
+		const vx = stir ? stir.vx * slow : 0;
+		const vz = stir ? stir.vz * slow : 0;
 
 		// ---- the rings turning: dragged by the beaters, dragging each other, slowing down ----
 		for ( let r = 1; r <= rings; r ++ ) {
@@ -210,7 +216,7 @@ export class DoughBody {
 					// a hollow right under the whisk, and the dough thrown up in a rim around it
 					force += stir.spin * ( - DIG * e + THROW * q * e );
 					// piled up in front of where it's going, a trough behind it
-					force += BOW * ( dx * stir.vx + dz * stir.vz ) * e;
+					force += BOW * ( dx * vx + dz * vz ) * e;
 					// bubbling and heaving while it spins
 					force += CHURN * stir.spin * e * Math.sin( this.time * 31 + phase[ i ] );
 
@@ -227,6 +233,19 @@ export class DoughBody {
 
 			v[ i ] += a[ i ] * dt;
 			h[ i ] += v[ i ] * dt;
+
+			// never far from where it rests (whatever happens, the dough stays in the bowl)
+			if ( h[ i ] > MAX_UP ) {
+
+				h[ i ] = MAX_UP;
+				if ( v[ i ] > 0 ) v[ i ] = 0;
+
+			} else if ( h[ i ] < - MAX_UP ) {
+
+				h[ i ] = - MAX_UP;
+				if ( v[ i ] < 0 ) v[ i ] = 0;
+
+			}
 
 		}
 
