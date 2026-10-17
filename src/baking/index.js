@@ -66,6 +66,7 @@ let noticeFor = 0;
 const trayAt = new THREE.Vector3(); // where a dragged tray is going
 let shown = ''; // what the oven's display shows now
 let bakedFor = 0; // how long they've baked, in seconds as if at 180° (the knob makes it go faster or slower)
+let bakeTick = null; // the real time (performance.now) of the last frame it baked in
 let saveIn = 0; // seconds until that's saved again
 let knobShownFor = 0; // the display shows the temperature for a moment after the knob's turned
 const SMOKE_ALARM = 0.3; // the alarm goes off when the smoke's this thick
@@ -584,7 +585,7 @@ export function initBaking( { room, camera: cam, controls: ctrl } ) {
 			// still in the oven: it kept baking while the page was away
 			placeTray( tray, OVEN_INSIDE );
 			const { seconds = 0, at = saved.bakeStart } = saved.bakeProgress ?? {};
-			bakedFor = seconds + ( Date.now() - at ) / 1000 * bakeSpeed();
+			bakedFor = seconds + ( Date.now() - at ) / 1000 * bakeSpeed( shownTemperature() );
 			setState( { onTray, baking: true, bakeStart: saved.bakeStart, bakeProgress: { seconds: bakedFor, at: Date.now() } } );
 
 		} else {
@@ -670,7 +671,13 @@ export function updateBaking( dt ) {
 	const { baking } = getState();
 	if ( baking ) {
 
-		bakedFor += dt * bakeSpeed();
+		// by the real clock, not by the frames: a slow frame must not make the oven slow (frame times
+		// are capped, so counting them would bake for less time than the clock says). And at the
+		// temperature the dial shows, so 180° bakes at exactly the normal speed
+		const now = performance.now();
+		const elapsed = bakeTick === null ? dt : ( now - bakeTick ) / 1000;
+		bakeTick = now;
+		bakedFor += elapsed * bakeSpeed( shownTemperature() );
 		bakeLevel.value = bakedFor / BAKE_PERFECT;
 		saveIn -= dt;
 		if ( saveIn <= 0 ) {
@@ -683,6 +690,7 @@ export function updateBaking( dt ) {
 	}
 
 	const s = baking ? bakedFor : 0;
+	if ( ! baking ) bakeTick = null;
 
 	// the oven's display: the temperature for a moment after the knob's turned (and whenever
 	// it's not baking), otherwise the clock
