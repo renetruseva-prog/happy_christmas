@@ -48,13 +48,12 @@ export function loadCookies() {
 
 }
 
-// how far the baking got: { onTray, bakeStart, bakeProgress, temperature, baked } (see state.js)
+// how far the baking got: { onTray, bakeStart, temperature, baked } (see state.js)
 export function loadBaking() {
 
 	return {
 		onTray: Array.isArray( saved.onTray ) ? saved.onTray.filter( Number.isInteger ) : [],
 		bakeStart: typeof saved.bakeStart === 'number' ? saved.bakeStart : null,
-		bakeProgress: typeof saved.bakeProgress?.seconds === 'number' ? saved.bakeProgress : null,
 		temperature: typeof saved.temperature === 'number' ? saved.temperature : null,
 		baked: saved.baked?.result ? saved.baked : null,
 	};
@@ -86,11 +85,11 @@ export function isNewGame() {
 // save whenever the state changes
 export function trackProgress() {
 
-	subscribe( ( { inBowl, mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, bakeProgress, temperature, baked, decorating, decor } ) => {
+	subscribe( ( { inBowl, mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, temperature, baked, decorating, decor } ) => {
 
 		try {
 
-			localStorage.setItem( KEY, JSON.stringify( { inBowl: inBowl.map( ( r ) => r.userData.id ), mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, bakeProgress, temperature, baked, decorating, decor } ) );
+			localStorage.setItem( KEY, JSON.stringify( { inBowl: inBowl.map( ( r ) => r.userData.id ), mixed, doughOut, rolled, cookies, cut, onTray, bakeStart, temperature, baked, decorating, decor } ) );
 
 		} catch { /* storage unavailable: progress just won't persist */ }
 
