@@ -238,6 +238,7 @@ export function initMixer( { scene, room: kitchen, camera: cam, controls, canvas
 		camera,
 		controls,
 		canvas,
+		freeView: true,
 		verb: 'Mix',
 		guide: {
 			motion: 'circle',
