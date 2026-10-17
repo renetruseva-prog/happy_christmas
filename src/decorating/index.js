@@ -101,20 +101,45 @@ function ground( at ) {
 function workPoint() {
 
 	raycaster.setFromCamera( pointer, camera );
+	const up = new THREE.Vector3( 0, 1, 0 );
 
-	// where the mouse ray meets what's under it: found by trying the height of what's there (the
-	// paper, a cookie, the icing on it) and trying again at the height of what that turns up
-	let height = paperY;
-	for ( let i = 0; i < 3; i ++ ) {
+	// first, is the mouse over the top of a cookie (or the icing on it)? The ray is checked against
+	// each cookie's own top surface, which is higher than the paper: so what's under the pointer on
+	// the screen is what it picks, even right at the edge of a cookie
+	for ( const decor of decors ) {
 
-		workPlane.set( new THREE.Vector3( 0, 1, 0 ), - height );
-		if ( ! raycaster.ray.intersectPlane( workPlane, point ) ) return null;
-		height = ground( point ).y;
+		let height = decor.baseY + decor.top;
+		for ( let i = 0; i < 3; i ++ ) {
+
+			workPlane.set( up, - height );
+			if ( ! raycaster.ray.intersectPlane( workPlane, point ) ) break;
+			local.copy( point ).applyMatrix4( decor.inverse );
+			if ( ! decor.catches( local.x, local.y ) ) {
+
+				height = - Infinity; // (not over this cookie)
+				break;
+
+			}
+
+			height = decor.baseY + decor.top + decor.depthAt( local.x, local.y ); // (the icing's height, if there's icing: try again there)
+
+		}
+
+		if ( height === - Infinity ) continue;
+		workPlane.set( up, - height );
+		if ( ! raycaster.ray.intersectPlane( workPlane, point ) ) continue;
+		local.copy( point ).applyMatrix4( decor.inverse );
+		if ( ! decor.catches( local.x, local.y ) ) continue;
+		point.y = height;
+		return point;
 
 	}
 
+	// otherwise it's over the paper
+	workPlane.set( up, - paperY );
+	if ( ! raycaster.ray.intersectPlane( workPlane, point ) ) return null;
 	if ( point.x < trayInside.min.x || point.x > trayInside.max.x || point.z < trayInside.min.z || point.z > trayInside.max.z ) return null;
-	point.y = height;
+	point.y = paperY;
 	return point;
 
 }

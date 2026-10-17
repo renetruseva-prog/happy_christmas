@@ -280,7 +280,7 @@ export function updateProps( dt, { point, pressing, camera } ) {
 		lastTip.copy( tipNow );
 		tipKnown = true;
 		if ( squeeze < 0.3 || carry < 1 ) return { holding: 'icing' };
-		return { holding: 'icing', squeezing: { tip: tipNow, out: X.clone().applyQuaternion( object.quaternion ), moving: velocity.clampLength( 0, 1.5 ) } };
+		return { holding: 'icing', squeezing: { tip: tipNow, out: X.clone().applyQuaternion( object.quaternion ), moving: velocity.clampLength( 0, 1.5 ), aim: at.clone() } };
 
 	}
 
