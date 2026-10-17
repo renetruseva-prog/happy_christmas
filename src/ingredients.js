@@ -10,6 +10,7 @@ import { pace } from './sequence.js';
 import { play } from './audio.js';
 import { addBody } from './physics.js';
 import { burst } from './debris.js';
+import { swingPendant } from './pendant.js';
 import { flashNotice } from './ui.js';
 import { TABLE_TOP } from './table.js';
 
@@ -165,6 +166,7 @@ function smash( root, body ) {
 
 	}
 
+	swingPendant( 1 ); // (the crash shakes the table: the lamp swings)
 	flashNotice( 'Ouch! Try again.' );
 
 	// a new one is on the shelf again, as it was
