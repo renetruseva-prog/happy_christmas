@@ -26,16 +26,18 @@
         pointer-events: none; opacity: 0; transition: opacity 0.15s;
       }
       #status {
-        position: fixed; left: 20px; top: 20px;
-        max-width: calc(100vw - 40px); box-sizing: border-box;
+        max-width: 100%; box-sizing: border-box; text-align: center;
         padding: 8px 16px; border-radius: 18px;
         background: rgba(20, 12, 8, 0.75); color: #ffe8c8;
         font: 500 14px/1.25 system-ui, sans-serif;
         pointer-events: none; opacity: 0; transition: opacity 0.3s;
       }
+      /* what's not being shown takes no room in the stack */
+      #status:empty, #hint:empty, #status[style*="opacity: 0;"], #hint[style*="opacity: 0;"] { display: none; }
+      #bottom-stack #camera-btn { position: static; }
       /* camera mixing: the button to switch it on, and a mirrored preview with the tracked hand */
       #camera-btn {
-        position: fixed; right: 20px; top: 20px;
+        position: fixed; right: 20px; top: 20px; /* (placed in the bottom stack, see below) */
         padding: 8px 16px; border: 0; border-radius: 999px;
         background: rgba(179, 32, 42, 0.9); color: #fff3e6;
         font: 600 14px/1.2 system-ui, sans-serif; cursor: pointer;
@@ -337,8 +339,6 @@
          their own rows, the keys guide shrinks, and the bottom panels move up out of its way */
       @media (max-width: 900px) {
         #cookie-counter, #oven-timer { top: 66px; }
-        #camera-btn { top: 66px; right: 12px; }
-        #status { left: 12px; top: 12px; max-width: calc(100vw - 24px); }
       }
       @media (max-width: 960px) {
         /* the keys guide goes to the right edge, small, so the bottom stays clear */
@@ -373,6 +373,7 @@
   </head>
   <body>
     <div id="bottom-stack">
+      <div id="status"></div>
       <div id="tutorial" aria-live="polite">
         <svg viewBox="0 0 64 64" aria-hidden="true">
           <!-- going round (mixing) -->
@@ -400,14 +401,13 @@
         </svg>
         <div><b id="tutorial-text"></b><small id="tutorial-small"></small></div>
       </div>
+      <button id="camera-btn" type="button">Mix with your hand (C)</button>
       <div id="hint"></div>
     </div>
-    <div id="status"></div>
     <div id="sound-panel" aria-label="Sound settings">
       <div class="row" data-bus="music"><button type="button" aria-label="Music on or off">🎵</button><span>Music</span><input type="range" min="0" max="100" step="1" aria-label="Music volume"></div>
       <div class="row" data-bus="sfx"><button type="button" aria-label="Sounds on or off">🔊</button><span>Sounds</span><input type="range" min="0" max="100" step="1" aria-label="Sounds volume"></div>
     </div>
-    <button id="camera-btn" type="button">Mix with your hand (C)</button>
     <div id="camera"><video playsinline muted></video><canvas></canvas></div>
 
     <div id="walk-keys" aria-hidden="true">
