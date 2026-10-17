@@ -18,6 +18,7 @@ import { showIntro, introShown } from './intro.js';
 import { SwirlMeter } from './swirl.js';
 import { loop } from '../audio.js';
 import { MIN_SWIRL } from '../config.js';
+import { initSplatter, initDragging, updateSplatter } from './splatter.js';
 
 const UP = new THREE.Vector3( 0, 1, 0 );
 const TABLE_X = [ - 0.72, 0.72 ]; // where on the table it may lie (with a margin to the edges)
@@ -35,6 +36,7 @@ let running = false; // the motor is on (mouse button held, or a hand in front o
 let progress = 0;
 let spin = 0; // beater speed (radians per second)
 let turned = 0; // how far the beaters have turned in total
+let stirred = null; // where the beaters were last frame and which way they go round: { beaters, orbit }
 
 const plane = new THREE.Plane();
 const target = new THREE.Vector3();
@@ -235,6 +237,8 @@ export function initMixer( { scene, room: kitchen, camera: cam, controls, canvas
 	mixer = buildMixer();
 	mixer.group.visible = false;
 	scene.add( mixer.group );
+	initSplatter( scene );
+	initDragging( { camera, controls } );
 
 	tool = new HeldTool( {
 		camera,
@@ -320,6 +324,7 @@ function stir( from, center, dt ) {
 	orbit = out > 0.01 ? THREE.MathUtils.clamp( orbit / step, - 12, 12 ) : 0; // (near the middle the angle jumps about)
 
 	stirDough( { beaters, spin: spin / 45, vx, vz, orbit } );
+	return { beaters, orbit };
 
 }
 
@@ -336,6 +341,10 @@ export function updateMixer( dt ) {
 	// the motor's sound: only while it's held over the bowl and on (this must run when it isn't
 	// held too, or the sound would never be switched off)
 	loop( 'mixer', running && tool.holding && getState().mixing, 0.8 + spin / 150 );
+
+	// thick dough gets flung out of the bowl by the beaters (physics, see splatter.js; this also
+	// runs when the mixer is put down, so what's in the air lands)
+	updateSplatter( dt, { on: tool.holding && progress > 0.25, spin: spin / 45, beaters: stirred?.beaters ?? [], orbit: stirred?.orbit } );
 
 	if ( ! tool.holding ) return;
 
@@ -372,7 +381,7 @@ export function updateMixer( dt ) {
 	tool.updateGuide( gained, dt );
 
 	mixDough( progress, turned * 0.02 );
-	stir( from, center, dt );
+	stirred = stir( from, center, dt );
 	showStatus( `Mixing the dough · ${ Math.round( progress * 100 ) }%` );
 	if ( progress >= 1 ) finish();
 
