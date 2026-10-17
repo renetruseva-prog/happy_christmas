@@ -187,6 +187,19 @@ export function showOvenTimer( seconds, { temperature = 180, smoke = 0, alarm = 
 
 }
 
+// the cookies came out perfectly baked: a banner at the top, for a few seconds
+const bakedToast = document.getElementById( 'baked-toast' );
+let toastTimer = 0;
+export function showPerfectBake( { seconds, real, temperature } ) {
+
+	const at = temperature === 180 || ! temperature ? `${ Math.round( seconds ) } seconds at 180°` : `${ Math.round( real ) } seconds at ${ temperature }°`;
+	document.getElementById( 'baked-toast-text' ).textContent = `${ at }: golden brown and crisp. Time to decorate them!`;
+	bakedToast.classList.add( 'show' );
+	clearTimeout( toastTimer );
+	toastTimer = setTimeout( () => bakedToast.classList.remove( 'show' ), 7000 );
+
+}
+
 const result = document.getElementById( 'bake-result' );
 const bakeAgainButton = document.getElementById( 'bake-again' );
 const bakeDecorate = document.getElementById( 'bake-decorate' );

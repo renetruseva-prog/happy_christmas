@@ -17,7 +17,7 @@
 import * as THREE from 'three/webgpu';
 import { BAKE_PERFECT, UNDERBAKED_UNTIL, BURNT_FROM } from '../config.js';
 import { getState, setState, subscribe } from '../state.js';
-import { showGuide, hideGuide, showOvenTimer, showBakeResult, clock } from '../ui.js';
+import { showGuide, hideGuide, showOvenTimer, showBakeResult, showPerfectBake, clock } from '../ui.js';
 import { animate, ease } from '../sequence.js';
 import { loadBaking, loadDecor } from '../progress.js';
 import { cuts, bakeLevel } from '../cutting/cuts.js';
@@ -370,6 +370,7 @@ async function takeOut() {
 
 	const result = { result: resultFor( bakedFor ), seconds: Math.round( bakedFor * 10 ) / 10, real: Math.round( realSeconds() ), temperature: shownTemperature() };
 	bakeLevel.value = bakedFor / BAKE_PERFECT;
+	if ( result.result === 'perfect' ) showPerfectBake( result ); // (at once: they know it went right)
 	takingOut = true;
 	setState( { baking: false, busy: true } );
 	silenceAlarm();
@@ -689,8 +690,8 @@ export function updateBaking( dt ) {
 
 	}
 
-	const s = baking ? bakedFor : 0;
 	if ( ! baking ) bakeTick = null;
+	const s = baking ? bakedFor : 0;
 
 	// the oven's display: the temperature for a moment after the knob's turned (and whenever
 	// it's not baking), otherwise the clock
