@@ -15,9 +15,11 @@ import { updateLights } from './src/lights.js';
 import { updateTweens } from './src/tween.js';
 import { updateSequences } from './src/sequence.js';
 import { initReflections, updateReflections } from './src/reflections.js';
+import { initPhysics, stepPhysics } from './src/physics.js';
 import './src/ui.js';
 
 const world = await loadKitchen( scene, camera, controls );
+await initPhysics( world.room ); // the table, the bowl and the floor that things can fall on
 addChristmas( world.room, scene, camera ); // snow, frost, presents, a snowman...
 initBowl( world, scene, camera ); // before the ingredients: restoring saved progress uses it
 initIngredients( world );
@@ -44,6 +46,7 @@ renderer.setAnimationLoop( ( time ) => {
 	constrainCamera();
 	controls.update();
 	updateInteraction( dt );
+	stepPhysics( dt );
 	updateTweens( dt );
 	updateSequences( dt );
 	updateBowl( dt );
