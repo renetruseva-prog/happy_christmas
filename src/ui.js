@@ -1,6 +1,6 @@
 // everything that touches the HTML overlay
 import { subscribe } from './state.js';
-import { resetProgress } from './progress.js';
+import { resetProgress, isNewGame } from './progress.js';
 import { COOKIE_COUNT, BAKE_PERFECT } from './config.js';
 
 // what each baking result is called (see baking/)
@@ -105,6 +105,24 @@ subscribe( ( { inBowl, total, mixed, mixing, doughOut, rolling, rolled, cookies,
 	statusEl.style.opacity = 1;
 
 } );
+
+// ---------- the welcome card, at the start of a new game ----------
+const welcome = document.getElementById( 'welcome' );
+const welcomeStart = document.getElementById( 'welcome-start' );
+function closeWelcome() {
+
+	welcome.classList.remove( 'show' );
+
+}
+
+welcomeStart.addEventListener( 'click', closeWelcome );
+window.addEventListener( 'keydown', ( e ) => { if ( welcome.classList.contains( 'show' ) && ( e.key === 'Enter' || e.key === 'Escape' ) ) closeWelcome(); } );
+if ( isNewGame() ) {
+
+	welcome.classList.add( 'show' );
+	welcomeStart.focus();
+
+}
 
 // ---------- the cookie counter: a slot for each cookie, filled in as they're cut ----------
 const counter = document.getElementById( 'cookie-counter' );

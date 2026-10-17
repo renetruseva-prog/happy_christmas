@@ -78,6 +78,24 @@
       #use-mouse { background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
       #mix-intro .note { min-height: 1.4em; margin: 12px 0 0; font-size: 13px; color: #ffd27a; }
 
+      /* the welcome card, at the very start of a new game */
+      #welcome .card { text-align: left; width: min(520px, calc(100vw - 32px)); }
+      #welcome h2 { text-align: center; font-size: 25px; margin-top: 4px; }
+      #welcome .lead { text-align: center; font-size: 16px; color: #fff3e6; }
+      #welcome .steps { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin: 12px 0 14px; padding: 0; counter-reset: step; }
+      #welcome .steps li {
+        counter-increment: step; display: flex; align-items: center; gap: 5px; padding: 4px 9px 4px 5px;
+        border-radius: 999px; background: rgba(255, 232, 200, 0.1); font-size: 12.5px; font-weight: 600; color: #fff3e6;
+      }
+      #welcome .steps li::before {
+        content: counter(step); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+        background: #b3202a; font-size: 11px;
+      }
+      #welcome ul.tips { margin: 0 0 4px; padding: 0 0 0 18px; font-size: 14px; color: #ffe8c8; }
+      #welcome ul.tips li { margin: 0 0 6px; }
+      #welcome ul.tips li::marker { color: #ffb35c; }
+      #welcome-start { background: #b3202a; color: #fff3e6; }
+
       /* how many cookies are cut out: a slot for each, filled in as they're cut */
       #cookie-counter {
         position: fixed; left: 50%; top: 20px; transform: translate(-50%, -8px);
@@ -371,6 +389,22 @@
     </div>
 
     <div id="cookie-counter" aria-live="polite"><span class="slots"></span><span><b id="cookie-count">0 / 6</b> cookies</span></div>
+
+    <div id="welcome" class="overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+      <div class="card">
+        <h2 id="welcome-title">Welcome to the Christmas kitchen</h2>
+        <p class="lead">Santa is on his way and the cookie jar is empty. Can you save Christmas, one cookie at a time?</p>
+        <ol class="steps" aria-label="What you'll do">
+          <li>Mix</li><li>Roll</li><li>Cut</li><li>Bake</li><li>Decorate</li><li>Share</li>
+        </ol>
+        <ul class="tips">
+          <li>Click an ingredient to pick it up, then click the bowl to drop it in.</li>
+          <li>Drag to look around and scroll to zoom. Keep an eye on the oven clock: burnt cookies make Santa sad.</li>
+          <li>Finish with icing and sprinkles, then send a Christmas card to someone you love.</li>
+        </ul>
+        <div class="buttons"><button id="welcome-start" type="button">Let's bake</button></div>
+      </div>
+    </div>
 
     <div id="mix-intro" class="overlay" role="dialog" aria-modal="true" aria-labelledby="mix-intro-title">
       <div class="card">
