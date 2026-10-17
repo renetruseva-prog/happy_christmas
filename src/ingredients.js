@@ -8,6 +8,8 @@ import { isOverBowl, addToBowl, restoreInBowl } from './bowl/index.js';
 import { VIEWS, currentView, moveCameraTo, lockView } from './views.js';
 import { pace } from './sequence.js';
 import { play } from './audio.js';
+import { addBody } from './physics.js';
+import { TABLE_TOP } from './table.js';
 
 const POUR_PACE = 1.5; // how much faster than written the ingredient animations play
 
@@ -82,11 +84,42 @@ export function pickUp( root ) {
 	const { busy, inBowl } = getState();
 	if ( busy || inBowl.includes( root ) ) return;
 	cancelTween( root );
+	root.userData.falling?.remove(); // (picked up again while it was still tumbling)
+	root.userData.falling = null;
 	setState( { held: root } );
 
 }
 
+// let go of an ingredient away from the bowl: it drops onto the table and tumbles (physics), then
+// goes back where it came from. Resting on the table already: straight back.
 export function putBack( root ) {
+
+	const low = new THREE.Box3().setFromObject( root ).min.y;
+	if ( low < TABLE_TOP + 0.05 ) return sendHome( root );
+
+	const spin = new THREE.Vector3( Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5 ).multiplyScalar( 3 );
+	const body = addBody( root, { spin } );
+	root.userData.falling = body;
+	const started = performance.now();
+
+	// settled (or been loose long enough, or fallen off): back it goes
+	const check = setInterval( () => {
+
+		if ( root.userData.falling !== body ) return clearInterval( check ); // (picked up again)
+		const age = performance.now() - started;
+		const v = body.body.linvel();
+		const still = age > 600 && Math.hypot( v.x, v.y, v.z ) < 0.05;
+		if ( ! still && age < 3000 && root.position.y > - 1 ) return;
+		clearInterval( check );
+		body.remove();
+		root.userData.falling = null;
+		sendHome( root );
+
+	}, 30 );
+
+}
+
+function sendHome( root ) {
 
 	const home = root.userData.home;
 	root.quaternion.copy( home.quaternion );
