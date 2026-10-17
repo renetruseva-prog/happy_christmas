@@ -163,3 +163,51 @@ export function render() {
 	renderPipeline.render();
 
 }
+
+// Getting ready for what hasn't been seen yet. The GPU works out how to draw each kind of thing the
+// first time it's drawn, which can freeze the game for a moment in the middle of an animation (the
+// first flour pour, the first egg...). So the hidden things are compiled at the start, behind the
+// welcome card: they're made visible just long enough to be handed over, then hidden again.
+// (Compiled straight with the renderer, not through the glow pass: asking the pass to compile while
+// it's drawing fills the console with WebGPU errors.)
+export async function warmUp() {
+
+	await renderer.init();
+
+	const hidden = []; // [ object, how it was ]
+	const empty = []; // instanced things with nothing in them yet: they'd be skipped
+	scene.traverse( ( o ) => {
+
+		if ( ! ( o.isMesh || o.isSprite || o.isPoints || o.isLine ) ) return;
+		if ( o.visible === false || o.isInstancedMesh && o.count === 0 ) hidden.push( [ o, o.visible, o.frustumCulled ] );
+		if ( o.isInstancedMesh && o.count === 0 ) empty.push( o );
+
+	} );
+
+	for ( const [ o ] of hidden ) {
+
+		o.visible = true;
+		o.frustumCulled = false;
+
+	}
+
+	for ( const o of empty ) o.count = 1;
+
+	try {
+
+		await renderer.compileAsync( scene, camera );
+
+	} finally {
+
+		for ( const [ o, visible, culled ] of hidden ) {
+
+			o.visible = visible;
+			o.frustumCulled = culled;
+
+		}
+
+		for ( const o of empty ) o.count = 0;
+
+	}
+
+}
