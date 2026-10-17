@@ -1,5 +1,5 @@
 // entry point: builds the stage, loads the kitchen and runs the frame loop
-import { renderer, scene, camera, controls, constrainCamera, adaptResolution, render } from './src/stage.js';
+import { renderer, scene, camera, controls, constrainCamera, adaptResolution, render, warmUp } from './src/stage.js';
 import { loadKitchen } from './src/kitchen.js';
 import { initIngredients } from './src/ingredients.js';
 import { initBowl, updateBowl } from './src/bowl/index.js';
@@ -35,6 +35,8 @@ initBaking( { room: world.room, camera, controls } ); // after cutting: bakes th
 initDecorating( { room: world.room } ); // after baking: decorates the cookies that came out perfect
 initInteraction( { camera, canvas: renderer.domElement, interactables: world.interactables } );
 initReflections( world.room ); // the shiny ingredients reflect the kitchen
+
+warmUp(); // the GPU works out how to draw what's still hidden now, not in the middle of an animation
 
 let lastTime = 0;
 
