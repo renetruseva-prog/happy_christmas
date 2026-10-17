@@ -117,12 +117,34 @@ function hoverPose( cutter ) {
 
 }
 
+// with the cutter in the hand the left button works the cutter, not the view: but the wheel still
+// zooms and the right button still turns and moves the view
+let leftButton = null; // what the left button did before (while the cutter has it)
+
+function toolHasLeftButton( on ) {
+
+	if ( on ) {
+
+		if ( leftButton === null ) leftButton = controls.mouseButtons.LEFT;
+		controls.mouseButtons.LEFT = null;
+
+	} else if ( leftButton !== null ) {
+
+		controls.mouseButtons.LEFT = leftButton;
+		leftButton = null;
+
+	}
+
+	controls.enabled = true;
+
+}
+
 async function grab( cutter ) {
 
 	held = cutter;
 	following = false;
 	cutter.turnedTo = 0;
-	controls.enabled = false; // the mouse works the cutter now, not the view
+	toolHasLeftButton( true ); // the mouse works the cutter now, not the view
 	setState( { cutting: true } );
 
 	await fly( cutter.mesh, hoverPose( cutter ) ); // (it shrinks to cookie size on the way)
@@ -136,7 +158,7 @@ function putBack() {
 	held = null;
 	following = false;
 	fly( cutter.mesh, cutter.home, 0.45 );
-	controls.enabled = true;
+	toolHasLeftButton( false );
 	setState( { cutting: false } );
 
 }
