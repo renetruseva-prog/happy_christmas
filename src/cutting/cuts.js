@@ -10,8 +10,8 @@ import { bounds, apart, contains } from './outline.js';
 
 const UP = new THREE.Vector3( 0, 1, 0 );
 const MASK_SIZE = 1024; // pixels across the whole sheet (about a third of a millimetre each)
-const EDGE = 0.9; // how far out a cookie can go (1 = the very edge of the sheet, which is rounded)
-const GAP = 0.004; // room to leave between cookies
+const EDGE = 0.95; // how far out a cookie can go (1 = the very edge of the sheet, which is rounded)
+const GAP = 0.002; // room to leave between cookies
 const ROUNDING = 0.0015; // the cookie's rounded edge
 
 let dough = null;
@@ -59,10 +59,27 @@ function clearMask() {
 
 // ---------- where a cookie can go ----------
 // in the dough's own coordinates, where 1 is its edge
-function onSheet( p ) {
+export function onSheet( p ) {
 
 	const local = dough.worldToLocal( new THREE.Vector3( p.x, TABLE_TOP, p.z ) );
 	return Math.hypot( local.x, local.z ) <= EDGE;
+
+}
+
+// points (world x, z) round the edge of where a cookie can go, for showing the player the limit
+export function sheetLimit( steps = 96 ) {
+
+	dough.updateMatrixWorld();
+	const out = [];
+	for ( let i = 0; i < steps; i ++ ) {
+
+		const a = i / steps * Math.PI * 2;
+		const world = dough.localToWorld( new THREE.Vector3( Math.cos( a ) * EDGE, 0, Math.sin( a ) * EDGE ) );
+		out.push( { x: world.x, z: world.z } );
+
+	}
+
+	return out;
 
 }
 

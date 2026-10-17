@@ -20,7 +20,7 @@ import { TABLE_TOP } from '../table.js';
 import { rolledDough } from '../rolling/index.js';
 import { SHEET_THICKNESS } from '../rolling/dough.js';
 import { starOutline, area, selfIntersects, resample, smooth, bounds } from './outline.js';
-import { initCuts, cut, cuts, whyNot, inCut, toSaved, fromSaved } from './cuts.js';
+import { initCuts, cut, cuts, whyNot, inCut, toSaved, fromSaved, onSheet, sheetLimit } from './cuts.js';
 import { Trace } from './trace.js';
 
 const UP = new THREE.Vector3( 0, 1, 0 );
@@ -29,8 +29,8 @@ const HOVER = 0.035; // how high a cutter in hand hangs over the dough
 const REACH_X = [ - 0.75, 0.8 ]; // where over the table it can go
 const REACH_Z = [ - 0.45, 0.35 ];
 const TURN_STEP = Math.PI / 12; // one scroll turns the cutter 15°
-const CLOSE = 0.025; // letting go this close to the start closes the shape
-const MIN_AREA = 0.0008; // the smallest shape worth cutting (about 3 × 3 cm)
+const CLOSE = 0.04; // letting go this close to the start closes the shape (generous: it's hard to land on the spot)
+const MIN_AREA = 0.0005; // the smallest shape worth cutting (about 2 × 2 cm)
 const SMALLER = [ CUTTER_SCALE, CUTTER_SCALE * 0.85, CUTTER_SCALE * 0.7 ]; // the cutters' sizes, if the dough gets crowded
 
 let room = null;
@@ -48,6 +48,7 @@ let drawing = false; // a shape is being drawn
 let notice = null; // a short message for the hover hint ("that doesn't fit"), and for how long
 let noticeFor = 0;
 let guided = false; // the tutorial was shown
+let limitShown = false; // the line round the dough is up
 
 const pointer = new THREE.Vector2( 2, 2 );
 const raycaster = new THREE.Raycaster();
@@ -202,6 +203,7 @@ function onPointerDown( e ) {
 	controls.enabled = false;
 	setState( { cutting: true } );
 	trace.start( p );
+	trace.showReach( p, MAX_SHAPE_RADIUS * 2 ); // (a shape this big, round the start, fits)
 
 }
 
@@ -214,6 +216,7 @@ function onPointerMove( e ) {
 	if ( ! p ) return;
 	trace.add( p );
 	trace.showClosing( closes() );
+	trace.setValid( onSheet( p ) && ! inCut( p.x, p.z ) && Math.hypot( p.x - trace.points[ 0 ].x, p.z - trace.points[ 0 ].z ) <= MAX_SHAPE_RADIUS * 2 );
 
 }
 
@@ -259,8 +262,10 @@ function finishDrawing() {
 	const first = points[ 0 ];
 	let end = points.length;
 	while ( end > 3 && Math.hypot( points[ end - 1 ].x - first.x, points[ end - 1 ].z - first.z ) < 0.006 ) end --;
-	const outline = smooth( resample( points.slice( 0, end ), 0.004 ) );
+	let outline = smooth( resample( points.slice( 0, end ), 0.004 ) );
 
+	// a shaky line that crosses itself gets a second, heavier smoothing before it's turned down
+	if ( selfIntersects( outline ) ) outline = smooth( smooth( resample( points.slice( 0, end ), 0.01 ) ) );
 	if ( selfIntersects( outline ) ) return say( 'the outline crosses itself · try again' );
 	if ( area( outline ) < MIN_AREA ) return say( 'draw a bigger shape' );
 	if ( bounds( outline ).r > MAX_SHAPE_RADIUS ) return say( `draw a smaller shape · leave room for all ${ COOKIE_COUNT } cookies` );
@@ -478,6 +483,20 @@ export function initCutting( { room: kitchen, camera: cam, controls: ctrl } ) {
 }
 
 export function updateCutting( dt ) {
+
+	// the line round the dough that cookies stay inside, shown while there's cutting to do
+	if ( trace ) {
+
+		const { rolled, cut: done, rolling } = getState();
+		const wanted = rolled && ! done && ! rolling && !! dough?.visible;
+		if ( wanted !== limitShown ) {
+
+			limitShown = wanted;
+			trace.showLimit( wanted ? sheetLimit() : null );
+
+		}
+
+	}
 
 	if ( noticeFor > 0 ) {
 

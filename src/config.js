@@ -44,7 +44,7 @@ export const ROLL_DISTANCE = 1.4;
 // middle, so all of them fit on the rolled-out sheet
 export const COOKIE_COUNT = 6;
 export const CUTTER_SCALE = 0.5;
-export const MAX_SHAPE_RADIUS = 0.036;
+export const MAX_SHAPE_RADIUS = 0.042;
 
 // baking: real seconds in the oven, by the heat they're taken out at. Up to and including `upTo`
 // degrees (so exactly 200° is the first band) the cookies are perfect from `from` to `to` whole

@@ -24,7 +24,17 @@ export class Trace {
 		this.ring = new THREE.Mesh( ring, this.ringMaterial );
 		this.ring.visible = false;
 
-		parent.add( this.mesh, this.ring );
+		// where a cookie can go: a dashed line round the dough, shown while there's cutting to do
+		this.limit = new THREE.InstancedMesh( new THREE.CircleGeometry( 0.0016, 8 ).rotateX( - Math.PI / 2 ), new THREE.MeshBasicNodeMaterial( { color: 0xfff1d6, transparent: true, opacity: 0.55 } ), 96 );
+		this.limit.count = 0;
+		this.limit.frustumCulled = false;
+
+		// and while drawing, how far from the start the shape may reach (a ring that fits it)
+		this.reachMaterial = new THREE.MeshBasicNodeMaterial( { color: 0xfff1d6, transparent: true, opacity: 0.5 } );
+		this.reach = new THREE.Mesh( new THREE.RingGeometry( 0.985, 1, 64 ).rotateX( - Math.PI / 2 ), this.reachMaterial );
+		this.reach.visible = false;
+
+		parent.add( this.mesh, this.ring, this.limit, this.reach );
 
 	}
 
@@ -61,6 +71,46 @@ export class Trace {
 
 	}
 
+	// the edge of where a cookie can go: points (x, z) round the dough, every other one drawn (dashes)
+	showLimit( points ) {
+
+		if ( ! points ) {
+
+			this.limit.count = 0;
+			return;
+
+		}
+
+		let n = 0;
+		points.forEach( ( p, i ) => {
+
+			if ( i % 3 === 2 ) return;
+			this.limit.setMatrixAt( n ++, new THREE.Matrix4().makeTranslation( p.x, this.y, p.z ) );
+
+		} );
+		this.limit.count = n;
+		this.limit.instanceMatrix.needsUpdate = true;
+
+	}
+
+	// the ring round the start that the shape should stay inside (null: hide it)
+	showReach( p, radius ) {
+
+		this.reach.visible = !! p;
+		if ( ! p ) return;
+		this.reach.position.set( p.x, this.y, p.z );
+		this.reach.scale.set( radius, 1, radius );
+
+	}
+
+	// the line goes red where a shape can't be (off the dough, over a cookie, too far out)
+	setValid( valid ) {
+
+		this.mesh.material.color.set( valid ? 0x6b3d18 : 0xc2362a );
+		this.reachMaterial.color.set( valid ? 0xfff1d6 : 0xff8a7a );
+
+	}
+
 	// the start ring lights up when letting go would close the shape
 	showClosing( closing ) {
 
@@ -73,6 +123,8 @@ export class Trace {
 		this.points = [];
 		this.dots = this.mesh.count = 0;
 		this.ring.visible = false;
+		this.reach.visible = false;
+		this.setValid( true );
 
 	}
 
