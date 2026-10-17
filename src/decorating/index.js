@@ -15,7 +15,7 @@
 //   colorWheel.js  the colour picker
 import * as THREE from 'three/webgpu';
 import { getState, setState, subscribe } from '../state.js';
-import { loadDecor, resetProgress } from '../progress.js';
+import { loadDecor } from '../progress.js';
 import { scene, camera, controls } from '../stage.js';
 import { cuts } from '../cutting/cuts.js';
 import { placeTray, moveTray, slotPosition } from '../baking/tray.js';
@@ -29,6 +29,7 @@ import { IcingStream } from './icing.js';
 import { initLook, Falling, Spills } from './pieces.js';
 import { initProps, setOut, pickUp, putDown, heldProp, updateProps, setIcingColor, props } from './props.js';
 import { colorWheel } from './colorWheel.js';
+import { initShare, openShare, sharing } from './share.js';
 
 // where the tray goes on the table (its middle), and the view that looks down on it and the
 // things set out next to it
@@ -100,20 +101,45 @@ function ground( at ) {
 function workPoint() {
 
 	raycaster.setFromCamera( pointer, camera );
+	const up = new THREE.Vector3( 0, 1, 0 );
 
-	// where the mouse ray meets what's under it: found by trying the height of what's there (the
-	// paper, a cookie, the icing on it) and trying again at the height of what that turns up
-	let height = paperY;
-	for ( let i = 0; i < 3; i ++ ) {
+	// first, is the mouse over the top of a cookie (or the icing on it)? The ray is checked against
+	// each cookie's own top surface, which is higher than the paper: so what's under the pointer on
+	// the screen is what it picks, even right at the edge of a cookie
+	for ( const decor of decors ) {
 
-		workPlane.set( new THREE.Vector3( 0, 1, 0 ), - height );
-		if ( ! raycaster.ray.intersectPlane( workPlane, point ) ) return null;
-		height = ground( point ).y;
+		let height = decor.baseY + decor.top;
+		for ( let i = 0; i < 3; i ++ ) {
+
+			workPlane.set( up, - height );
+			if ( ! raycaster.ray.intersectPlane( workPlane, point ) ) break;
+			local.copy( point ).applyMatrix4( decor.inverse );
+			if ( ! decor.catches( local.x, local.y ) ) {
+
+				height = - Infinity; // (not over this cookie)
+				break;
+
+			}
+
+			height = decor.baseY + decor.top + decor.depthAt( local.x, local.y ); // (the icing's height, if there's icing: try again there)
+
+		}
+
+		if ( height === - Infinity ) continue;
+		workPlane.set( up, - height );
+		if ( ! raycaster.ray.intersectPlane( workPlane, point ) ) continue;
+		local.copy( point ).applyMatrix4( decor.inverse );
+		if ( ! decor.catches( local.x, local.y ) ) continue;
+		point.y = height;
+		return point;
 
 	}
 
+	// otherwise it's over the paper
+	workPlane.set( up, - paperY );
+	if ( ! raycaster.ray.intersectPlane( workPlane, point ) ) return null;
 	if ( point.x < trayInside.min.x || point.x > trayInside.max.x || point.z < trayInside.min.z || point.z > trayInside.max.z ) return null;
-	point.y = height;
+	point.y = paperY;
 	return point;
 
 }
@@ -379,7 +405,7 @@ function setPointer( e ) {
 
 function onPointerDown( e ) {
 
-	if ( ! active || e.button !== 0 || e.target !== controls.domElement || getState().busy || doneCard.classList.contains( 'show' ) ) return;
+	if ( ! active || e.button !== 0 || e.target !== controls.domElement || getState().busy || doneCard.classList.contains( 'show' ) || sharing() ) return;
 	setPointer( e );
 
 	// the piping bag and the bowls: picked up with a click (also instead of what's in the hand)
@@ -522,15 +548,28 @@ export function initDecorating( { room: kitchen } ) {
 
 	for ( const button of toolButtons ) button.addEventListener( 'click', () => selectTool( button.dataset.tool ) );
 
+	initShare();
+	const shareButton = document.getElementById( 'decorated-share' );
 	document.getElementById( 'decorate-done' ).addEventListener( 'click', () => {
 
 		if ( dirty ) save();
+		if ( tool ) selectTool( tool ); // (puts down what's in the hand)
+		const any = decors.some( ( d ) => d.decorated );
+		shareButton.disabled = ! any;
+		document.getElementById( 'decorated-note' ).textContent = any ? '' : 'Decorate a cookie first, then you can put it on a Christmas card.';
 		doneCard.classList.add( 'show' );
-		document.getElementById( 'decorated-keep' ).focus();
+		( any ? shareButton : document.getElementById( 'decorated-keep' ) ).focus();
+
+	} );
+
+	// the decorated cookies, on a plate, on a Christmas card
+	shareButton.addEventListener( 'click', () => {
+
+		doneCard.classList.remove( 'show' );
+		openShare( decors.filter( ( d ) => d.decorated ).map( ( d ) => d.cookie ) );
 
 	} );
 	document.getElementById( 'decorated-keep' ).addEventListener( 'click', () => doneCard.classList.remove( 'show' ) );
-	document.getElementById( 'decorated-over' ).addEventListener( 'click', () => resetProgress() );
 	window.addEventListener( 'keydown', ( e ) => {
 
 		if ( e.key !== 'Escape' || ! active ) return;
@@ -578,7 +617,7 @@ export function updateDecorating( dt ) {
 	noticeFor -= dt;
 	if ( getState().busy ) return;
 
-	const busy = doneCard.classList.contains( 'show' );
+	const busy = doneCard.classList.contains( 'show' ) || sharing();
 	const at = busy ? null : workPoint();
 
 	// the piping bag or a bowl, in the hand

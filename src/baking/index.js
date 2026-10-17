@@ -17,7 +17,7 @@
 import * as THREE from 'three/webgpu';
 import { BAKE_PERFECT, UNDERBAKED_UNTIL, BURNT_FROM } from '../config.js';
 import { getState, setState, subscribe } from '../state.js';
-import { showGuide, hideGuide, showOvenTimer, showBakeResult, clock } from '../ui.js';
+import { showGuide, hideGuide, showOvenTimer, showBakeResult, showPerfectBake, clock } from '../ui.js';
 import { animate, ease } from '../sequence.js';
 import { loadBaking, loadDecor } from '../progress.js';
 import { cuts, bakeLevel } from '../cutting/cuts.js';
@@ -66,6 +66,7 @@ let noticeFor = 0;
 const trayAt = new THREE.Vector3(); // where a dragged tray is going
 let shown = ''; // what the oven's display shows now
 let bakedFor = 0; // how long they've baked, in seconds as if at 180° (the knob makes it go faster or slower)
+let bakeTick = null; // the real time (performance.now) of the last frame it baked in
 let saveIn = 0; // seconds until that's saved again
 let knobShownFor = 0; // the display shows the temperature for a moment after the knob's turned
 const SMOKE_ALARM = 0.3; // the alarm goes off when the smoke's this thick
@@ -369,6 +370,7 @@ async function takeOut() {
 
 	const result = { result: resultFor( bakedFor ), seconds: Math.round( bakedFor * 10 ) / 10, real: Math.round( realSeconds() ), temperature: shownTemperature() };
 	bakeLevel.value = bakedFor / BAKE_PERFECT;
+	if ( result.result === 'perfect' ) showPerfectBake( result ); // (at once: they know it went right)
 	takingOut = true;
 	setState( { baking: false, busy: true } );
 	silenceAlarm();
@@ -584,7 +586,7 @@ export function initBaking( { room, camera: cam, controls: ctrl } ) {
 			// still in the oven: it kept baking while the page was away
 			placeTray( tray, OVEN_INSIDE );
 			const { seconds = 0, at = saved.bakeStart } = saved.bakeProgress ?? {};
-			bakedFor = seconds + ( Date.now() - at ) / 1000 * bakeSpeed();
+			bakedFor = seconds + ( Date.now() - at ) / 1000 * bakeSpeed( shownTemperature() );
 			setState( { onTray, baking: true, bakeStart: saved.bakeStart, bakeProgress: { seconds: bakedFor, at: Date.now() } } );
 
 		} else {
@@ -670,7 +672,13 @@ export function updateBaking( dt ) {
 	const { baking } = getState();
 	if ( baking ) {
 
-		bakedFor += dt * bakeSpeed();
+		// by the real clock, not by the frames: a slow frame must not make the oven slow (frame times
+		// are capped, so counting them would bake for less time than the clock says). And at the
+		// temperature the dial shows, so 180° bakes at exactly the normal speed
+		const now = performance.now();
+		const elapsed = bakeTick === null ? dt : ( now - bakeTick ) / 1000;
+		bakeTick = now;
+		bakedFor += elapsed * bakeSpeed( shownTemperature() );
 		bakeLevel.value = bakedFor / BAKE_PERFECT;
 		saveIn -= dt;
 		if ( saveIn <= 0 ) {
@@ -682,6 +690,7 @@ export function updateBaking( dt ) {
 
 	}
 
+	if ( ! baking ) bakeTick = null;
 	const s = baking ? bakedFor : 0;
 
 	// the oven's display: the temperature for a moment after the knob's turned (and whenever

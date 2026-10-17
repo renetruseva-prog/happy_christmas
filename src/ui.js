@@ -1,6 +1,6 @@
 // everything that touches the HTML overlay
 import { subscribe } from './state.js';
-import { resetProgress } from './progress.js';
+import { resetProgress, isNewGame } from './progress.js';
 import { COOKIE_COUNT, BAKE_PERFECT } from './config.js';
 
 // what each baking result is called (see baking/)
@@ -106,6 +106,24 @@ subscribe( ( { inBowl, total, mixed, mixing, doughOut, rolling, rolled, cookies,
 
 } );
 
+// ---------- the welcome card, at the start of a new game ----------
+const welcome = document.getElementById( 'welcome' );
+const welcomeStart = document.getElementById( 'welcome-start' );
+function closeWelcome() {
+
+	welcome.classList.remove( 'show' );
+
+}
+
+welcomeStart.addEventListener( 'click', closeWelcome );
+window.addEventListener( 'keydown', ( e ) => { if ( welcome.classList.contains( 'show' ) && ( e.key === 'Enter' || e.key === 'Escape' ) ) closeWelcome(); } );
+if ( isNewGame() ) {
+
+	welcome.classList.add( 'show' );
+	welcomeStart.focus();
+
+}
+
 // ---------- the cookie counter: a slot for each cookie, filled in as they're cut ----------
 const counter = document.getElementById( 'cookie-counter' );
 const slots = counter.querySelector( '.slots' );
@@ -166,6 +184,19 @@ export function showOvenTimer( seconds, { temperature = 180, smoke = 0, alarm = 
 	ovenLabel.textContent = alarm ? 'Smoke alarm! Wave the smoke away' : `In the oven · ${ temperature }°`;
 	ovenTimer.classList.toggle( 'alarm', alarm );
 	ovenTimer.classList.toggle( 'late', ! alarm && smoke > 0.05 );
+
+}
+
+// the cookies came out perfectly baked: a banner at the top, for a few seconds
+const bakedToast = document.getElementById( 'baked-toast' );
+let toastTimer = 0;
+export function showPerfectBake( { seconds, real, temperature } ) {
+
+	const at = temperature === 180 || ! temperature ? `${ Math.round( seconds ) } seconds at 180°` : `${ Math.round( real ) } seconds at ${ temperature }°`;
+	document.getElementById( 'baked-toast-text' ).textContent = `${ at }: golden brown and crisp. Time to decorate them!`;
+	bakedToast.classList.add( 'show' );
+	clearTimeout( toastTimer );
+	toastTimer = setTimeout( () => bakedToast.classList.remove( 'show' ), 7000 );
 
 }
 

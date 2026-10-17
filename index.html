@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cookie Baking Simulator</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- the Christmas card's lettering (see src/decorating/card.js) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Mountains+of+Christmas:wght@700&display=swap" />
     <style>
       html, body { margin: 0; overflow: hidden; background: #0d0a08; }
       /* the tutorial and the hover hint share one column at the bottom, so they stack and can
@@ -74,6 +78,24 @@
       #use-mouse { background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
       #mix-intro .note { min-height: 1.4em; margin: 12px 0 0; font-size: 13px; color: #ffd27a; }
 
+      /* the welcome card, at the very start of a new game */
+      #welcome .card { text-align: left; width: min(520px, calc(100vw - 32px)); }
+      #welcome h2 { text-align: center; font-size: 25px; margin-top: 4px; }
+      #welcome .lead { text-align: center; font-size: 16px; color: #fff3e6; }
+      #welcome .steps { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin: 12px 0 14px; padding: 0; counter-reset: step; }
+      #welcome .steps li {
+        counter-increment: step; display: flex; align-items: center; gap: 5px; padding: 4px 9px 4px 5px;
+        border-radius: 999px; background: rgba(255, 232, 200, 0.1); font-size: 12.5px; font-weight: 600; color: #fff3e6;
+      }
+      #welcome .steps li::before {
+        content: counter(step); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+        background: #b3202a; font-size: 11px;
+      }
+      #welcome ul.tips { margin: 0 0 4px; padding: 0 0 0 18px; font-size: 14px; color: #ffe8c8; }
+      #welcome ul.tips li { margin: 0 0 6px; }
+      #welcome ul.tips li::marker { color: #ffb35c; }
+      #welcome-start { background: #b3202a; color: #fff3e6; }
+
       /* how many cookies are cut out: a slot for each, filled in as they're cut */
       #cookie-counter {
         position: fixed; left: 50%; top: 20px; transform: translate(-50%, -8px);
@@ -92,6 +114,18 @@
       #cookie-counter .slot.filled.drawn { background: #c77a32; }
       #cookie-counter b { color: #fff3e6; font-variant-numeric: tabular-nums; }
       @keyframes pop { 0% { transform: scale(0.3); } 70% { transform: scale(1.25); } 100% { transform: none; } }
+
+      /* the "perfectly baked" confirmation, when the cookies come out just right */
+      #baked-toast {
+        position: fixed; left: 50%; top: 22px; z-index: 5; transform: translate(-50%, -14px);
+        max-width: calc(100vw - 32px); box-sizing: border-box; padding: 12px 24px; border-radius: 18px; text-align: center;
+        display: flex; flex-direction: column; gap: 2px; background: rgba(36, 104, 52, 0.95); color: #f1ffe9;
+        font: 500 14px/1.3 system-ui, sans-serif; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        pointer-events: none; opacity: 0; transition: opacity 0.35s, transform 0.35s;
+      }
+      #baked-toast b { font-size: 20px; color: #ffffff; }
+      #baked-toast.show { opacity: 1; transform: translate(-50%, 0); }
+      @media (max-width: 900px) { #baked-toast { top: 66px; } }
 
       /* the oven clock while the cookies bake */
       #oven-timer {
@@ -113,7 +147,6 @@
       /* decorating: the tools on the side (at the bottom on a small screen) */
       #bake-decorate { background: #b3202a; color: #fff3e6; }
       #decorated-keep { background: #b3202a; color: #fff3e6; }
-      #decorated-over { background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
       #decorate {
         position: fixed; left: 16px; top: 50%; width: 208px; box-sizing: border-box;
         display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 18px;
@@ -194,6 +227,52 @@
         #decorate .icing-opts .controls { flex: 1 1 110px; display: flex; flex-direction: column; gap: 8px; }
         #decorate #decorate-done { flex: 1 1 100%; }
         body.decorating #bottom-stack { bottom: calc(var(--dock, 0px) + 16px); }
+      }
+
+      /* the Christmas card to share (see src/decorating/share.js) */
+      #decorated-share, #card-share { background: #b3202a; color: #fff3e6; }
+      .overlay button.link { background: none; padding: 6px; color: #d9bfa0; font-weight: 500; font-size: 13px; text-decoration: underline; }
+      #decorated-note { font-size: 13px; color: #ffd27a; min-height: 0; margin: 10px 0 0; }
+      #decorated-note:empty { display: none; }
+      .overlay .card.share-card { width: min(860px, calc(100vw - 32px)); padding: 22px 26px 20px; text-align: left; }
+      .share-card h2 { text-align: center; margin-top: 0; }
+      .share-body { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+      .card-preview { position: relative; perspective: 1400px; }
+      #card-flip {
+        position: relative; display: block; width: 100%; aspect-ratio: 4 / 5; padding: 0; border: 0; border-radius: 10px;
+        background: none; cursor: pointer; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(.2, .7, .2, 1);
+      }
+      #card-flip.turned { transform: rotateY(180deg); }
+      #card-flip img {
+        position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 10px; backface-visibility: hidden;
+        box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5); background: #6e0f17;
+      }
+      #card-flip #card-back { transform: rotateY(180deg); background: #fbf3e4; }
+      #card-flip:focus-visible { outline: 2px solid #ffb35c; outline-offset: 4px; }
+      .snapping-note { display: none; position: absolute; inset: 0; z-index: 1; place-items: center; text-align: center; color: #ffe8c8; font-size: 14px; }
+      #share.snapping .snapping-note { display: grid; }
+      #share.snapping #card-flip { visibility: hidden; }
+      .share-side { display: flex; flex-direction: column; gap: 10px; }
+      .share-side label { font-size: 14px; color: #fff3e6; font-weight: 600; }
+      #card-message {
+        width: 100%; box-sizing: border-box; resize: none; padding: 10px 12px; border-radius: 12px; border: 0;
+        background: #fbf3e4; color: #5a2a16; font: 600 22px/1.25 "Caveat", "Segoe Print", cursive;
+      }
+      #card-message:focus-visible { outline: 2px solid #ffb35c; outline-offset: 2px; }
+      .count-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #d9bfa0; font-variant-numeric: tabular-nums; margin-top: -4px; }
+      .share-more { display: flex; gap: 8px; }
+      .share-more button { flex: 1; background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
+      .share-more button[hidden] { display: none; }
+      .share-end { display: flex; gap: 8px; margin-top: 4px; }
+      .share-end button { flex: 1; }
+      #share-close { background: #ffe8c8; color: #3a1d10; }
+      #share-restart { background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
+      .share-hint { font-size: 12.5px; color: #d9bfa0; margin: 0; }
+      #share-status { font-size: 13px; color: #ffd27a; margin: 0; min-height: 1.2em; }
+      @media (max-width: 680px) {
+        .share-body { grid-template-columns: 1fr; gap: 14px; }
+        .card-preview { width: min(300px, 70vw); margin: 0 auto; }
+        .overlay .card.share-card { padding: 18px 16px 14px; }
       }
 
       /* while the cookies are carried to the oven, the mouse is a 3D hand in the room (see
@@ -323,6 +402,22 @@
 
     <div id="cookie-counter" aria-live="polite"><span class="slots"></span><span><b id="cookie-count">0 / 6</b> cookies</span></div>
 
+    <div id="welcome" class="overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+      <div class="card">
+        <h2 id="welcome-title">Welcome to the Christmas kitchen</h2>
+        <p class="lead">Santa is on his way and the cookie jar is empty. Can you save Christmas, one cookie at a time?</p>
+        <ol class="steps" aria-label="What you'll do">
+          <li>Mix</li><li>Roll</li><li>Cut</li><li>Bake</li><li>Decorate</li><li>Share</li>
+        </ol>
+        <ul class="tips">
+          <li>Click an ingredient to pick it up, then click the bowl to drop it in.</li>
+          <li>Drag to look around and scroll to zoom. Keep an eye on the oven clock: burnt cookies make Santa sad.</li>
+          <li>Finish with icing and sprinkles, then send a Christmas card to someone you love.</li>
+        </ul>
+        <div class="buttons"><button id="welcome-start" type="button">Let's bake</button></div>
+      </div>
+    </div>
+
     <div id="mix-intro" class="overlay" role="dialog" aria-modal="true" aria-labelledby="mix-intro-title">
       <div class="card">
         <h2 id="mix-intro-title">Time to mix the dough!</h2>
@@ -344,6 +439,7 @@
       </div>
     </div>
 
+    <div id="baked-toast" role="status" aria-live="polite"><b>Perfectly baked!</b><span id="baked-toast-text"></span></div>
     <div id="oven-timer" aria-live="polite"><span id="oven-label">In the oven</span><b id="oven-time">0:00</b></div>
 
     <div id="bake-result" class="overlay" role="dialog" aria-modal="true" aria-labelledby="bake-result-title">
@@ -389,10 +485,42 @@
     <div id="decorated-done" class="overlay" role="dialog" aria-modal="true" aria-labelledby="decorated-title">
       <div class="card">
         <h2 id="decorated-title">Beautiful cookies!</h2>
-        <p>They look good enough to eat. Merry Christmas!</p>
+        <p>They look good enough to eat. Keep decorating, or turn them into a Christmas card for your friends and family?</p>
         <div class="buttons">
+          <button id="decorated-share" type="button">Share the love</button>
           <button id="decorated-keep" type="button">Keep decorating</button>
-          <button id="decorated-over" type="button">Start over from the beginning</button>
+        </div>
+        <p class="note" id="decorated-note"></p>
+      </div>
+    </div>
+
+    <div id="share" class="overlay" role="dialog" aria-modal="true" aria-labelledby="share-title">
+      <div class="card share-card">
+        <h2 id="share-title">Share the love</h2>
+        <div class="share-body">
+          <div class="card-preview">
+            <div class="snapping-note" aria-live="polite">Snapping a photo of your cookies…</div>
+            <button id="card-flip" type="button" aria-label="Turn the card over">
+              <img id="card-front" alt="Your Christmas card: your cookies on a plate, under Happy Christmas!" />
+              <img id="card-back" alt="The back of your card, with your message" />
+            </button>
+          </div>
+          <div class="share-side">
+            <label for="card-message">Your message, on the back of the card</label>
+            <textarea id="card-message" rows="4" maxlength="150" placeholder="Merry Christmas! I baked these just for you."></textarea>
+            <div class="count-row"><button id="card-turn" class="link" type="button">Show the back</button><span id="card-count">0/150</span></div>
+            <button id="card-share" type="button">Share your card</button>
+            <div class="share-more">
+              <button id="card-download" type="button">Download</button>
+              <button id="card-copy" type="button">Copy picture</button>
+            </div>
+            <p class="share-hint">Send it to Instagram, Facebook, WhatsApp, messages or mail, or save it and post it anywhere.</p>
+            <p id="share-status" aria-live="polite"></p>
+            <div class="share-end">
+              <button id="share-close" type="button">Keep decorating</button>
+              <button id="share-restart" type="button">Restart the game</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

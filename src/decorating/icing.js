@@ -10,7 +10,6 @@ import { addReflection } from '../reflections.js';
 const GRAVITY = 9.81;
 const PUSH = 0.24; // how fast it comes out of the nozzle (metres per second)
 const SPACING = 0.75; // a bit of icing every SPACING × its radius of rope, as it comes out
-const KEEP = 0.2; // how much of the bag's own speed it keeps
 const LANDS = 0.22; // how much of it actually lands as icing (the rest is how thick the rope looks)
 const MAX = 700;
 
@@ -41,14 +40,18 @@ export class IcingStream {
 		this.owed = 0; // how much rope is due to come out (in bits)
 		this.rope = 0;
 		this.lastTip = null;
+		this.lastAim = null;
 
 	}
 
 	// squeeze for dt seconds: tip (where the nozzle is), out (the way it points), moving (the bag's
 	// velocity), radius (how thick the rope is), color (a THREE.Color)
-	squeeze( dt, { tip, out, moving, radius, color } ) {
+	// aim: the spot on the cookie (or the paper) the mouse points at. Each bit is sent so that it
+	// lands right there, however fast the bag moves: the icing goes where you point
+	squeeze( dt, { tip, out, moving, aim, radius, color } ) {
 
 		const from = this.lastTip ?? tip;
+		const aimFrom = this.lastAim ?? aim;
 		this.owed += dt * PUSH / ( radius * SPACING );
 		const count = Math.floor( this.owed );
 		this.owed -= count;
@@ -58,14 +61,22 @@ export class IcingStream {
 			// spread out along the way the tip went this frame, each a little way out already
 			const k = ( n + 1 ) / count;
 			const age = dt * ( 1 - k );
-			const v = out.clone().multiplyScalar( PUSH ).addScaledVector( moving, KEEP );
+			const v = out.clone().multiplyScalar( PUSH );
 			const at = from.clone().lerp( tip, k ).addScaledVector( v, age );
 			v.y -= GRAVITY * age;
+
+			// where the mouse was when this bit came out, and the time it takes to fall there
+			const spot = aimFrom.clone().lerp( aim, k );
+			const drop = Math.max( at.y - spot.y, 0.002 );
+			const fall = ( - v.y + Math.sqrt( v.y * v.y + 2 * GRAVITY * drop ) ) / GRAVITY;
+			v.x = ( spot.x - at.x ) / fall;
+			v.z = ( spot.z - at.z ) / fall;
 			this.bits.push( { at, v, r: radius, color: color.clone(), rope: this.rope, gap: radius * SPACING } );
 
 		}
 
 		this.lastTip = tip.clone();
+		this.lastAim = aim.clone();
 
 	}
 
@@ -74,6 +85,7 @@ export class IcingStream {
 
 		if ( this.lastTip === null ) return;
 		this.lastTip = null;
+		this.lastAim = null;
 		this.owed = 0;
 		this.rope ++;
 

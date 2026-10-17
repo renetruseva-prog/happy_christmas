@@ -76,6 +76,13 @@ export function loadCut() {
 
 }
 
+// a brand new game: nothing's been done yet (so the welcome card is shown)
+export function isNewGame() {
+
+	return loadProgress().length === 0 && ! loadMixed() && ! saved.doughOut && loadCookies().length === 0;
+
+}
+
 // save whenever the state changes
 export function trackProgress() {
 
