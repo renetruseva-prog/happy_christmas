@@ -288,11 +288,29 @@ function wholeTray() {
 
 }
 
+// a CookieDecor for each cookie that has none yet. They can't all be made when the game loads: the
+// cookies cut since then (in this visit, not before a refresh) wouldn't have one, and everything
+// poured on them would fall past them onto the paper
+function makeDecors() {
+
+	for ( const cut of cuts ) {
+
+		if ( decors.some( ( d ) => d.cookie === cut.cookie ) ) continue;
+		const decor = new CookieDecor( cut );
+		decor.inverse = new THREE.Matrix4();
+		decor.baseY = 0;
+		decors.push( decor );
+
+	}
+
+}
+
 // ---------- starting ----------
 async function start( { instantly = false } = {} ) {
 
 	if ( active ) return;
 	active = true;
+	makeDecors();
 	document.body.classList.add( 'decorating' );
 	hideGuide();
 	const tray = bakingTray();
@@ -517,14 +535,7 @@ export function initDecorating( { room: kitchen } ) {
 	stream = new IcingStream( scene );
 	falling = new Falling( scene );
 	spills = new Spills( tray.mesh, stream.material );
-	cuts.forEach( ( cut ) => {
-
-		const decor = new CookieDecor( cut );
-		decor.inverse = new THREE.Matrix4();
-		decor.baseY = 0;
-		decors.push( decor );
-
-	} );
+	makeDecors();
 
 	// the colour wheel and the sliders
 	colorWheel( {
