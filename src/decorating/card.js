@@ -5,8 +5,8 @@
 // characters). Then it can be shared: through the device's share sheet (Instagram, Facebook,
 // WhatsApp, messages, mail...) where there is one, or downloaded, or copied, to post anywhere.
 import * as THREE from 'three/webgpu';
-import { renderer } from '../stage.js';
-import { addReflection } from '../reflections.js';
+import { renderer } from '../core/stage.js';
+import { addReflection } from '../world/reflections.js';
 
 export const MESSAGE_LENGTH = 150;
 const DEFAULT_MESSAGE = 'Merry Christmas! I baked and decorated these cookies just for you.';

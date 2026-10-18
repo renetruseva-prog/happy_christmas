@@ -4,7 +4,7 @@
 // - the cookie itself, sitting in the hole, with softly rounded edges so the cut shows
 import * as THREE from 'three/webgpu';
 import { positionLocal, texture, uniform } from 'three/tsl';
-import { TABLE_TOP } from '../table.js';
+import { TABLE_TOP } from '../core/table.js';
 import { doughMaterial, SHEET_THICKNESS } from '../rolling/dough.js';
 import { bounds, apart, contains } from './outline.js';
 

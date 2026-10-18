@@ -5,19 +5,19 @@
 //   model.js  the mixer's 3D model    intro.js  the camera-or-mouse card
 //   swirl.js  telling stirring in circles apart from other movement
 import * as THREE from 'three/webgpu';
-import { getState, setState, subscribe } from '../state.js';
+import { getState, setState, subscribe } from '../core/state.js';
 import { showStatus } from '../ui.js';
-import { runSequence, ease, easeOutBack } from '../sequence.js';
-import { loadMixed } from '../progress.js';
-import { TABLE_TOP, thingsOnTable, clearance } from '../table.js';
+import { runSequence, ease, easeOutBack } from '../core/sequence.js';
+import { loadMixed } from '../core/progress.js';
+import { TABLE_TOP, thingsOnTable, clearance } from '../core/table.js';
 import { bowlInfo, contentsTop, mixDough, stirDough } from '../bowl/index.js';
-import { preloadHandTracker } from '../handTracking.js';
-import { HeldTool } from '../heldTool.js';
+import { preloadHandTracker } from '../input/handTracking.js';
+import { HeldTool } from '../input/heldTool.js';
 import { buildMixer } from './model.js';
 import { showIntro, introShown } from './intro.js';
 import { SwirlMeter } from './swirl.js';
-import { loop } from '../audio.js';
-import { MIN_SWIRL } from '../config.js';
+import { loop } from '../audio/audio.js';
+import { MIN_SWIRL } from '../core/config.js';
 import { initSplatter, initDragging, updateSplatter } from './splatter.js';
 
 const UP = new THREE.Vector3( 0, 1, 0 );

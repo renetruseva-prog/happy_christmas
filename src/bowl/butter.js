@@ -1,7 +1,7 @@
 // dropping the butter: it's carried over a free spot in the bowl and falls in, tumbling, then lands
 // flat along the bowl's wall with a little bounce. Its paper stays on the table.
 import * as THREE from 'three/webgpu';
-import { animate, until, arcLerp, ease } from '../sequence.js';
+import { animate, until, arcLerp, ease } from '../core/sequence.js';
 import { ctx, bowl, solids, claimSpot, surfaceY } from './contents.js';
 import { GRAVITY } from './particles.js';
 

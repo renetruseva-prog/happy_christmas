@@ -8,8 +8,8 @@
 // - the little tutorial: shown when you start, hidden once you're getting on with it,
 //   and back if you stop for a few seconds
 import * as THREE from 'three/webgpu';
-import { getState, setState } from './state.js';
-import { showGuide, hideGuide, guideShown } from './ui.js';
+import { getState, setState } from '../core/state.js';
+import { showGuide, hideGuide, guideShown } from '../ui.js';
 import { startHandTracking, stopHandTracking, updateHandTracking, isTracking, handPosition } from './handTracking.js';
 
 const cameraButton = document.getElementById( 'camera-btn' );

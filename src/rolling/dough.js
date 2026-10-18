@@ -3,7 +3,7 @@
 // it's rolled out (1). The amount of dough stays the same, so thinner means wider.
 import * as THREE from 'three/webgpu';
 import { color, float, mix, mx_noise_float, positionWorld, smoothstep, uniform, uv } from 'three/tsl';
-import { ease } from '../sequence.js';
+import { ease } from '../core/sequence.js';
 
 const BALL = { radius: 0.055, thickness: 0.05 }; // fresh out of the bowl
 export const SHEET_THICKNESS = 0.007; // rolled out (about 7 mm, like real cookie dough)

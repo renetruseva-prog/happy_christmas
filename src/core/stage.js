@@ -4,8 +4,8 @@ import { pass } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { MAX_DISTANCE, ROOM_MIN, ROOM_MAX } from './config.js';
-import { addExtraLights } from './lights.js';
-import { keepCameraOut } from './solids.js';
+import { addExtraLights } from '../world/lights.js';
+import { keepCameraOut } from '../world/solids.js';
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color( 0x0d0a08 );

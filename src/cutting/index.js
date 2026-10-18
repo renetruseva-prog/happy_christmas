@@ -11,12 +11,12 @@
 //   outline.js  the shapes    cuts.js  the cookies and the holes they leave
 //   trace.js  the line you draw
 import * as THREE from 'three/webgpu';
-import { getState, setState, subscribe } from '../state.js';
-import { COOKIE_COUNT, CUTTER_SCALE, MAX_SHAPE_RADIUS } from '../config.js';
+import { getState, setState, subscribe } from '../core/state.js';
+import { COOKIE_COUNT, CUTTER_SCALE, MAX_SHAPE_RADIUS } from '../core/config.js';
 import { showGuide, hideGuide, showCookiesDone } from '../ui.js';
-import { runSequence, animate, ease } from '../sequence.js';
-import { loadCookies, loadCut } from '../progress.js';
-import { TABLE_TOP } from '../table.js';
+import { runSequence, animate, ease } from '../core/sequence.js';
+import { loadCookies, loadCut } from '../core/progress.js';
+import { TABLE_TOP } from '../core/table.js';
 import { rolledDough } from '../rolling/index.js';
 import { SHEET_THICKNESS } from '../rolling/dough.js';
 import { starOutline, area, selfIntersects, resample, smooth, bounds } from './outline.js';

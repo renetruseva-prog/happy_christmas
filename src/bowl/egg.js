@@ -2,7 +2,7 @@
 // from the bottom, and the clear white and the yolk fall onto a free spot in the bowl. The white
 // spreads into a thin glossy puddle and the yolk sits on it.
 import * as THREE from 'three/webgpu';
-import { animate, until, arcLerp, ease } from '../sequence.js';
+import { animate, until, arcLerp, ease } from '../core/sequence.js';
 import { ctx, bowl, solids, claimSpot, Layer } from './contents.js';
 import { materials } from './materials.js';
 import { GRAVITY } from './particles.js';

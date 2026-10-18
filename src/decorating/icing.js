@@ -5,7 +5,7 @@
 // the cookie (see cookieDecor.js), or onto the baking paper if it misses.
 // It's drawn as a chain of little balls joined by tubes.
 import * as THREE from 'three/webgpu';
-import { addReflection } from '../reflections.js';
+import { addReflection } from '../world/reflections.js';
 
 const GRAVITY = 9.81;
 const PUSH = 0.24; // how fast it comes out of the nozzle (metres per second)

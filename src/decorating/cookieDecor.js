@@ -12,7 +12,7 @@
 import * as THREE from 'three/webgpu';
 import { attribute } from 'three/tsl';
 import { contains, bounds } from '../cutting/outline.js';
-import { addReflection } from '../reflections.js';
+import { addReflection } from '../world/reflections.js';
 import { look } from './pieces.js';
 
 const N = 64; // grid points along each side

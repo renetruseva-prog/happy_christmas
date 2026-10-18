@@ -1,7 +1,7 @@
 // the baking tray on the counter next to the oven: the cookies go on it in two rows of three,
 // and it slides into the oven on the rack and back out again
 import * as THREE from 'three/webgpu';
-import { animate, ease } from '../sequence.js';
+import { animate, ease } from '../core/sequence.js';
 
 const ROWS = 2;
 const PER_ROW = 3;

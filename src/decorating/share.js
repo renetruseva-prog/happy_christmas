@@ -2,7 +2,7 @@
 // a click), the message for the back (typed in, up to 150 characters, and drawn on the card as it's
 // typed), and the ways to send it: the device's own share sheet (Instagram, Facebook, WhatsApp,
 // messages, mail... whatever's on it), or a download, or a copy to paste into a post.
-import { resetProgress } from '../progress.js';
+import { resetProgress } from '../core/progress.js';
 import { snapCookies, drawFront, drawBack, cardFonts, toBlob, MESSAGE_LENGTH, DEFAULT_MESSAGE } from './card.js';
 
 const KEY = 'happy-christmas-card-message';

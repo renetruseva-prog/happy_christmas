@@ -7,7 +7,7 @@
 //   over its lip (see pieces.js), right over the mouse
 // Putting it down takes it back to its place on the table.
 import * as THREE from 'three/webgpu';
-import { animate, ease } from '../sequence.js';
+import { animate, ease } from '../core/sequence.js';
 
 const UP = new THREE.Vector3( 0, 1, 0 );
 const X = new THREE.Vector3( 1, 0, 0 );

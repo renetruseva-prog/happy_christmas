@@ -1,18 +1,18 @@
 // the baking gameplay: pick an ingredient up, carry it, drop/pour it in the bowl or put it back
 import * as THREE from 'three/webgpu';
-import { INGREDIENTS, HOLD_HEIGHT, HOLD_X, HOLD_Z } from './config.js';
-import { getState, setState } from './state.js';
-import { tweenTo, cancelTween } from './tween.js';
-import { loadProgress } from './progress.js';
+import { INGREDIENTS, HOLD_HEIGHT, HOLD_X, HOLD_Z } from './core/config.js';
+import { getState, setState } from './core/state.js';
+import { tweenTo, cancelTween } from './core/tween.js';
+import { loadProgress } from './core/progress.js';
 import { isOverBowl, addToBowl, restoreInBowl } from './bowl/index.js';
-import { VIEWS, currentView, moveCameraTo, lockView } from './views.js';
-import { pace } from './sequence.js';
-import { play } from './audio.js';
-import { addBody } from './physics.js';
-import { burst } from './debris.js';
-import { swingPendant } from './pendant.js';
+import { VIEWS, currentView, moveCameraTo, lockView } from './core/views.js';
+import { pace } from './core/sequence.js';
+import { play } from './audio/audio.js';
+import { addBody } from './world/physics.js';
+import { burst } from './world/debris.js';
+import { swingPendant } from './world/pendant.js';
 import { flashNotice } from './ui.js';
-import { TABLE_TOP } from './table.js';
+import { TABLE_TOP } from './core/table.js';
 
 const POUR_PACE = 1.5; // how much faster than written the ingredient animations play
 

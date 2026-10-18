@@ -5,9 +5,9 @@
 // bumps into the table, the counters, the oven and the tree (and slides along them if it walks
 // into them at an angle), so it has to go round. Only while it's switched on (see enableWalking)
 import * as THREE from 'three/webgpu';
-import { camera, controls } from './stage.js';
-import { ROOM_MIN, ROOM_MAX } from './config.js';
-import { standingAt } from './solids.js';
+import { camera, controls } from '../core/stage.js';
+import { ROOM_MIN, ROOM_MAX } from '../core/config.js';
+import { standingAt } from '../world/solids.js';
 
 const SPEED = 1.3; // metres a second
 const MARGIN = 0.2; // how close to a wall it can get

@@ -14,15 +14,15 @@
 //   pieces.js  the chips and sprinkles falling, and what's spilled   props.js  the bag and the bowls
 //   colorWheel.js  the colour picker
 import * as THREE from 'three/webgpu';
-import { getState, setState, subscribe } from '../state.js';
-import { loadDecor } from '../progress.js';
-import { scene, camera, controls } from '../stage.js';
+import { getState, setState, subscribe } from '../core/state.js';
+import { loadDecor } from '../core/progress.js';
+import { scene, camera, controls } from '../core/stage.js';
 import { cuts } from '../cutting/cuts.js';
 import { placeTray, moveTray, slotPosition } from '../baking/tray.js';
 import { bakingTray } from '../baking/index.js';
-import { moveCameraTo } from '../views.js';
-import { animate, ease } from '../sequence.js';
-import { TABLE_TOP } from '../table.js';
+import { moveCameraTo } from '../core/views.js';
+import { animate, ease } from '../core/sequence.js';
+import { TABLE_TOP } from '../core/table.js';
 import { showGuide, hideGuide } from '../ui.js';
 import { CookieDecor } from './cookieDecor.js';
 import { IcingStream } from './icing.js';

@@ -15,11 +15,11 @@
 //   flames.js and smoke.js  the fire in the oven and the smoke when they burn (Shadertoy shaders,
 //   ported in shaders/)
 import * as THREE from 'three/webgpu';
-import { bakeBand, bakeResult } from '../config.js';
-import { getState, setState, subscribe } from '../state.js';
+import { bakeBand, bakeResult } from '../core/config.js';
+import { getState, setState, subscribe } from '../core/state.js';
 import { showGuide, hideGuide, showOvenTimer, showBakeResult, showPerfectBake, clock } from '../ui.js';
-import { animate, ease } from '../sequence.js';
-import { loadBaking, loadDecor } from '../progress.js';
+import { animate, ease } from '../core/sequence.js';
+import { loadBaking, loadDecor } from '../core/progress.js';
 import { cuts, bakeLevel } from '../cutting/cuts.js';
 import { initOven, ovenParts, openDoor, setHeat, showOnDisplay } from './oven.js';
 import { findTray, slotPosition, placeTray, moveTray } from './tray.js';
@@ -27,10 +27,10 @@ import { initSmoke, updateSmoke, smokeLevel, overSmoke, puffSmoke } from './smok
 import { initFlames, updateFlames, flareLevel } from './flames.js';
 import { initKnob, hitsKnob, turnKnob, setTemperature, shownTemperature, heatLevel, NORMAL } from './knob.js';
 import { setAlarm, silenceAlarm } from './alarm.js';
-import { VIEWS } from '../views.js';
-import { enableWalking, updateWalking, walkPose, reachPoint, isBlocked } from '../walking.js';
-import { addSolids } from '../solids.js';
-import { moveCameraTo } from '../views.js';
+import { VIEWS } from '../core/views.js';
+import { enableWalking, updateWalking, walkPose, reachPoint, isBlocked } from '../input/walking.js';
+import { addSolids } from '../world/solids.js';
+import { moveCameraTo } from '../core/views.js';
 import { Hand } from './hand.js';
 import { rolledDough } from '../rolling/index.js';
 

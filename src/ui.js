@@ -1,8 +1,8 @@
 // everything that touches the HTML overlay
-import { subscribe } from './state.js';
-import { resetProgress, isNewGame } from './progress.js';
-import { COOKIE_COUNT, bakeBand } from './config.js';
-import './sounds.js';
+import { subscribe } from './core/state.js';
+import { resetProgress, isNewGame } from './core/progress.js';
+import { COOKIE_COUNT, bakeBand } from './core/config.js';
+import './audio/sounds.js';
 
 // what each baking result is called (see baking/)
 const RESULTS = {
