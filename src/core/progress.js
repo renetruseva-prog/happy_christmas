@@ -110,8 +110,14 @@ export function resetProgress() {
 
 }
 
-// testing cheat: Shift+B jumps to a batch of 6 cookies cut and ready on the baking tray, then
-// reloads (not mentioned anywhere in the game)
+// testing cheats (not mentioned anywhere in the game): Shift+A jumps to cutting the cookies, with the
+// dough rolled out; Shift+B to a batch of 6 cookies cut and ready on the baking tray. Both reload
+function readyToCut() {
+
+	return { inBowl: Object.keys( INGREDIENTS ), mixed: true, doughOut: true, rolled: true, cookies: [], cut: false, onTray: [], bakeStart: null, temperature: 180, baked: null, decorating: false, decor: {} };
+
+}
+
 function readyBatch() {
 
 	const cookies = [];
@@ -136,13 +142,16 @@ function readyBatch() {
 
 }
 
+const CHEATS = { KeyA: readyToCut, KeyB: readyBatch };
+
 window.addEventListener( 'keydown', ( e ) => {
 
-	if ( e.code !== 'KeyB' || ! e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.repeat ) return;
+	const cheat = CHEATS[ e.code ];
+	if ( ! cheat || ! e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.repeat ) return;
 	if ( e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement ) return;
 	try {
 
-		localStorage.setItem( KEY, JSON.stringify( readyBatch() ) );
+		localStorage.setItem( KEY, JSON.stringify( cheat() ) );
 		location.reload();
 
 	} catch { /* storage unavailable */ }

@@ -17,8 +17,8 @@ camera.position.set( - 0.9, 1.75, 1.85 );
 // the same picture, so it's capped by how many pixels in all it draws (about 3 million: 1.5x on a
 // laptop screen), not by a fixed ratio. That way zooming the page in or out (which changes the
 // ratio and the window size together) keeps the picture just as sharp, and it's worked out again
-// whenever the window changes. It's never below 1x on a normal screen, and drops by itself if the
-// frame rate does (see adaptResolution below)
+// whenever the window changes. It drops by itself if the frame rate does (see adaptResolution
+// below), down to 0.65x on a slow laptop: a little softer, but not choppy
 const PIXEL_BUDGET = 3e6;
 let quality = 1; // 1 full .. MIN_QUALITY, lowered while frames are slow
 const MIN_QUALITY = 0.4; // (the floor in pixelRatio() is what really stops it)
@@ -29,8 +29,8 @@ function sharpRatio() {
 
 }
 
-// never below 1 pixel per page pixel (or the screen's own, if it's lower), however slow the frames
-const MIN_RATIO = 1;
+// never below 0.65 pixels per page pixel (or the screen's own, if it's lower), however slow the frames
+const MIN_RATIO = 0.65;
 
 function pixelRatio() {
 
@@ -116,7 +116,7 @@ export function constrainCamera() {
 // with fewer pixels, and creep back up once they're as quick as the screen allows. "As quick as the
 // screen allows" is learned (the quickest stretch seen: about 16.7 ms on a 60 Hz screen), because a
 // fixed target would never be reached on a screen that can't go that fast, and the picture would
-// stay low-res for good. It never goes below normal sharpness (1 pixel per page pixel). Only whole
+// stay low-res for good. It never goes below 0.65 pixels per page pixel. Only whole
 // stretches of frames count, and not when the page was in the background.
 let timeSum = 0;
 let frames = 0;
@@ -158,8 +158,25 @@ export function adaptResolution( realDt ) {
 
 }
 
+// While frames are slow, the lamp's shadows are redrawn every other frame instead of every frame
+// (they're the second drawing of everything that casts one). A shadow one frame behind can't be seen.
+const shadowLights = [];
+let shadowFrame = 0;
+let shadowsThrottled = false;
+
+function throttleShadows( on ) {
+
+	if ( on === shadowsThrottled ) return;
+	shadowsThrottled = on;
+	if ( shadowLights.length === 0 ) scene.traverse( ( o ) => { if ( o.isLight && o.castShadow && o.shadow ) shadowLights.push( o ); } );
+	for ( const light of shadowLights ) light.shadow.autoUpdate = ! on;
+
+}
+
 export function render() {
 
+	throttleShadows( quality < 0.95 );
+	if ( shadowsThrottled && ( shadowFrame ++ & 1 ) === 0 ) for ( const light of shadowLights ) light.shadow.needsUpdate = true;
 	renderPipeline.render();
 
 }

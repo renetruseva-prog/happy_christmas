@@ -12,6 +12,22 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
+    <!-- the loading screen: up from the first moment (before any of the game's code has arrived) and
+         filled in by src/core/loading.js as the kitchen, the physics and the GPU get ready -->
+    <div id="loading" role="status" aria-live="polite">
+      <div class="load-snow" aria-hidden="true"><i style="--x:0%;--d:6s;--delay:-0s;--s:10px"></i><i style="--x:37%;--d:6s;--delay:-4s;--s:15px"></i><i style="--x:74%;--d:6s;--delay:-8s;--s:20px"></i><i style="--x:11%;--d:6s;--delay:-3s;--s:11px"></i><i style="--x:48%;--d:6s;--delay:-7s;--s:16px"></i><i style="--x:85%;--d:6s;--delay:-2s;--s:21px"></i><i style="--x:22%;--d:6s;--delay:-6s;--s:12px"></i><i style="--x:59%;--d:6s;--delay:-1s;--s:17px"></i><i style="--x:96%;--d:6s;--delay:-5s;--s:22px"></i><i style="--x:33%;--d:6s;--delay:-0s;--s:13px"></i><i style="--x:70%;--d:6s;--delay:-4s;--s:18px"></i><i style="--x:7%;--d:6s;--delay:-8s;--s:23px"></i><i style="--x:44%;--d:6s;--delay:-3s;--s:14px"></i><i style="--x:81%;--d:6s;--delay:-7s;--s:19px"></i><i style="--x:18%;--d:6s;--delay:-2s;--s:10px"></i><i style="--x:55%;--d:6s;--delay:-6s;--s:15px"></i></div>
+      <div class="load-card">
+        <svg class="load-star" viewBox="0 0 64 64" aria-hidden="true"><path d="M32,5 L39.5,23.2 L59,24.9 L44.2,37.8 L48.6,57 L32,46.8 L15.4,57 L19.8,37.8 L5,24.9 L24.5,23.2 Z" /><circle cx="26" cy="29" r="2.2" /><circle cx="38" cy="30" r="2.2" /><path d="M26 38 Q32 43 38 38" /></svg>
+        <h1>Cookie Baking Simulator</h1>
+        <p class="load-sub">Getting the Christmas kitchen ready</p>
+        <div class="load-bar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="load-fill"><svg class="load-cookie" viewBox="0 0 64 64" aria-hidden="true"><path d="M32,3 L40.5,23 L62,25 L45.5,39 L50.5,60 L32,48.5 L13.5,60 L18.5,39 L2,25 L23.5,23 Z" /><circle cx="27" cy="29" r="2.4" /><circle cx="38" cy="31" r="2.4" /><circle cx="32" cy="40" r="2.4" /></svg></div>
+        </div>
+        <div class="load-row"><span id="load-msg">Warming up the kitchen…</span><b id="load-pct">0%</b></div>
+        <p id="load-error" hidden></p>
+      </div>
+    </div>
+
     <div id="top-bar">
       <div class="row">
         <div id="status"></div>

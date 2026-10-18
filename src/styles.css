@@ -51,8 +51,8 @@ html, body { margin: 0; overflow: hidden; background: #0d0a08; }
 }
 #camera-btn.show { opacity: 1; pointer-events: auto; }
 /* sound settings, on the left: music and sounds each get an on/off button and a volume slider */
-/* the restart panel, with the sound panel under it, on the left */
-#side-panels { position: fixed; left: 20px; top: 20px; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+/* the restart panel, with the sound panel under it, on the right */
+#side-panels { position: fixed; right: 20px; top: 20px; z-index: 5; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 #restart-panel { padding: 8px 10px; border-radius: 14px; background: rgba(20, 12, 8, 0.65); }
 #sound-panel {
   display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 14px;
@@ -368,14 +368,14 @@ body.hand-mode { cursor: none !important; }
 }
 @media (max-width: 960px) {
   /* the keys guide goes to the right edge, small, so the bottom stays clear */
-  #walk-keys { left: auto; right: 12px; bottom: auto; top: 112px; padding: 6px 8px; border-radius: 10px; }
+  #walk-keys { left: auto; right: 12px; bottom: auto; top: 164px; padding: 6px 8px; border-radius: 10px; }
   #walk-keys .pad { grid-template-columns: repeat(3, 28px); gap: 3px; }
   #walk-keys kbd { height: 24px; }
   #walk-keys p { display: none; }
 }
 @media (max-width: 1100px) {
   /* the camera picture goes under the top buttons instead of the bottom corner */
-  #camera { top: 112px; bottom: auto; right: 12px; width: min(200px, 30vw); }
+  #camera { top: 164px; bottom: auto; right: 12px; width: min(200px, 30vw); }
 }
 @media (max-width: 760px) {
   #bottom-stack { bottom: 12px; }
@@ -394,4 +394,75 @@ body.hand-mode { cursor: none !important; }
 @media (max-height: 520px) {
   #tutorial small { display: none; }
   #tutorial svg { width: 40px; height: 40px; }
+}
+
+/* ---------- the loading screen (see core/loading.js) ---------- */
+#loading {
+  position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 42%, #b42630 0%, #7d1520 55%, #4a0b12 100%);
+  color: #fff3e0; transition: opacity 0.7s ease, visibility 0.7s;
+}
+#loading.done { opacity: 0; visibility: hidden; pointer-events: none; }
+/* candy-cane bands along the top and the bottom */
+#loading::before, #loading::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 16px;
+  background: repeating-linear-gradient(-45deg, #c4202e 0 12px, #fffaf2 12px 24px);
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.35);
+}
+#loading::before { top: 0; }
+#loading::after { bottom: 0; }
+.load-snow { position: absolute; inset: 0; pointer-events: none; }
+.load-snow i {
+  position: absolute; top: -30px; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8); filter: blur(0.5px); opacity: 0.75;
+  animation: load-fall var(--d) linear var(--delay) infinite;
+}
+@keyframes load-fall {
+  0% { transform: translate(0, -30px); }
+  50% { transform: translate(24px, 52vh); }
+  100% { transform: translate(-10px, 108vh); }
+}
+.load-card {
+  position: relative; width: min(440px, calc(100vw - 48px)); box-sizing: border-box; padding: 30px 30px 24px; text-align: center;
+  border-radius: 28px; background: rgba(40, 8, 12, 0.55); backdrop-filter: blur(4px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), inset 0 0 0 2px rgba(255, 232, 200, 0.28);
+}
+.load-star { width: 64px; height: 64px; margin: -64px auto 8px; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.4)); animation: load-bob 2.4s ease-in-out infinite; }
+.load-star path:first-child { fill: #e3a457; stroke: #fff1c9; stroke-width: 2.5; stroke-linejoin: round; }
+.load-star circle { fill: #3b1d0c; }
+.load-star path:last-child { fill: none; stroke: #3b1d0c; stroke-width: 2.2; stroke-linecap: round; }
+@keyframes load-bob { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-7px) rotate(6deg); } }
+.load-card h1 {
+  margin: 0; font: 700 40px/1.05 "Mountains of Christmas", Georgia, serif; letter-spacing: 0.01em;
+  background: linear-gradient(180deg, #fff4c9, #f1c04d); -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: none; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.3));
+}
+.load-sub { margin: 8px 0 22px; font: 600 22px/1.1 "Caveat", "Segoe Print", cursive; color: #ffe8c8; }
+.load-bar {
+  position: relative; height: 22px; border-radius: 999px; background: #fbf3e4; padding: 3px; box-sizing: border-box;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3), 0 0 0 3px #d9a93a;
+}
+.load-fill {
+  position: relative; height: 100%; width: 0%; min-width: 16px; border-radius: 999px;
+  background: repeating-linear-gradient(-45deg, #c4202e 0 10px, #fffaf2 10px 20px); background-size: 28.28px 28.28px;
+  animation: load-stripes 0.9s linear infinite; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.14);
+}
+@keyframes load-stripes { to { background-position: 28.28px 0; } }
+/* a little star cookie rides on the end of the bar */
+.load-cookie { position: absolute; right: -14px; top: 50%; width: 32px; height: 32px; margin-top: -16px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45)); animation: load-spin 3s linear infinite; }
+.load-cookie path { fill: #e3a457; stroke: #fff1c9; stroke-width: 3; stroke-linejoin: round; }
+.load-cookie circle { fill: #b3202a; }
+@keyframes load-spin { to { transform: rotate(360deg); } }
+.load-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 14px; font: 500 14px/1.2 system-ui, sans-serif; color: #ffe8c8; text-align: left; }
+.load-row b { font: 700 26px/1 system-ui, sans-serif; color: #ffd27a; font-variant-numeric: tabular-nums; min-width: 3.4ch; text-align: right; }
+#load-error { margin: 16px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.35); font: 500 14px/1.4 system-ui, sans-serif; color: #ffd9d0; }
+#load-error[hidden] { display: none; }
+@media (max-width: 480px) {
+  .load-card { padding: 28px 20px 20px; }
+  .load-card h1 { font-size: 32px; }
+  .load-sub { font-size: 19px; margin-bottom: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .load-snow i, .load-star, .load-fill, .load-cookie { animation: none; }
+  #loading { transition: opacity 0.2s; }
 }

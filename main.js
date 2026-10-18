@@ -1,4 +1,5 @@
 // entry point: builds the stage, loads the kitchen and runs the frame loop
+import { setLoading, crawl, finishLoading } from './src/core/loading.js'; // (first: the loading screen is filled in as the rest gets ready)
 import { renderer, scene, camera, controls, constrainCamera, adaptResolution, render, warmUp } from './src/core/stage.js';
 import { loadKitchen } from './src/world/kitchen.js';
 import { initIngredients } from './src/ingredients.js';
@@ -21,9 +22,12 @@ import { initPendant, updatePendant } from './src/world/pendant.js';
 import './src/ui.js';
 
 const world = await loadKitchen( scene, camera, controls );
+setLoading( 0.58 );
 await initPhysics( world.room ); // the table, the bowl and the floor that things can fall on
+setLoading( 0.64 );
 initDebris( scene ); // what's left when something breaks
 await initPendant( world.room ); // the lamp over the table swings when it's knocked
+setLoading( 0.7 );
 addChristmas( world.room, scene, camera ); // snow, frost, presents, a snowman...
 initBowl( world, scene, camera ); // before the ingredients: restoring saved progress uses it
 initIngredients( world );
@@ -36,6 +40,8 @@ initDecorating( { room: world.room } ); // after baking: decorates the cookies t
 initInteraction( { camera, canvas: renderer.domElement, interactables: world.interactables } );
 initReflections( world.room ); // the shiny ingredients reflect the kitchen
 
+setLoading( 0.8 );
+crawl( 0.97, 12 ); // (the GPU getting ready can't be measured: the bar creeps on meanwhile)
 await warmUp(); // the GPU works out how to draw what's still hidden now, not in the middle of an animation
 
 let lastTime = 0;
@@ -67,3 +73,5 @@ renderer.setAnimationLoop( ( time ) => {
 	render();
 
 } );
+
+finishLoading(); // (the loading screen fades out once the first picture is drawn)
