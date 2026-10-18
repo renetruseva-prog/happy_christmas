@@ -11,40 +11,41 @@
 // The oven's knob sets the heat: hotter has a shorter perfect window (and the fire burns higher). When they burn, smoke pours out and the smoke alarm goes off, and
 // the clock is hard to read through the smoke: wave the mouse over it to clear it.
 //   oven.js  the door, the glow and the clock    tray.js  the baking tray    knob.js  the knob
-//   alarm.js  the smoke alarm
+//   alarm.js  the smoke alarm    hand.js  the 3D hand
+//   carrying.js  carrying the cookies to the tray    guides.js  the tutorial cards
+//   ovenDisplay.js  the clock, the display, the fire and the smoke while baking
 //   flames.js and smoke.js  the fire in the oven and the smoke when they burn (Shadertoy shaders,
 //   ported in shaders/)
 import * as THREE from 'three/webgpu';
 import { bakeBand, bakeResult } from '../core/config.js';
 import { getState, setState, subscribe } from '../core/state.js';
-import { showGuide, hideGuide, showOvenTimer, showBakeResult, showPerfectBake, clock } from '../ui.js';
+import { hideGuide, showOvenTimer, showBakeResult, showPerfectBake } from '../ui.js';
 import { animate, ease } from '../core/sequence.js';
 import { loadBaking, loadDecor } from '../core/progress.js';
 import { cuts, bakeLevel } from '../cutting/cuts.js';
-import { initOven, ovenParts, openDoor, setHeat, showOnDisplay } from './oven.js';
+import { initOven, ovenParts, openDoor } from './oven.js';
 import { findTray, slotPosition, placeTray, moveTray } from './tray.js';
-import { initSmoke, updateSmoke, smokeLevel, overSmoke, puffSmoke } from './smoke.js';
-import { initFlames, updateFlames, flareLevel } from './flames.js';
-import { initKnob, hitsKnob, turnKnob, setTemperature, shownTemperature, heatLevel, NORMAL } from './knob.js';
-import { setAlarm, silenceAlarm } from './alarm.js';
+import { initSmoke, smokeLevel, overSmoke, puffSmoke } from './smoke.js';
+import { initFlames } from './flames.js';
+import { initKnob, hitsKnob, turnKnob, setTemperature, shownTemperature, NORMAL } from './knob.js';
+import { silenceAlarm } from './alarm.js';
 import { VIEWS } from '../core/views.js';
-import { enableWalking, updateWalking, walkPose, reachPoint, isBlocked } from '../input/walking.js';
+import { enableWalking, updateWalking, walkPose, isBlocked } from '../input/walking.js';
 import { addSolids } from '../world/solids.js';
 import { moveCameraTo } from '../core/views.js';
 import { Hand } from './hand.js';
+import { initCarrying, carried, looseCookies, nearCookie, nearTray, pickUp, putBackCarried, placeCarried, followHand, handPoint, ROUNDING } from './carrying.js';
+import { initGuides, resetGuide, guideCarrying, guideTray, guideBaking, updateBakingGuide, zoomedOnOven } from './guides.js';
+import { initOvenDisplay, updateOven, realSeconds, bakeProgress, knobTurned } from './ovenDisplay.js';
 import { rolledDough } from '../rolling/index.js';
 
 const UP = new THREE.Vector3( 0, 1, 0 );
-const REACH = 0.45; // how close a cookie has to be to where the hand reaches (see walking.js) to pick it up
-const TRAY_REACH = 0.5; // and the tray, to put one on it
-const HOLD_SCALE = 1.4; // a carried cookie is a bit bigger, so it can be seen
 const GRIP = 0.85; // how tightly the hand closes round it
 const TRAY_HEIGHT = 0.96; // a dragged tray's middle floats this high, just over the counter
 const TRAY_X = [ 0.6, 2.1 ];
 const TRAY_Z = [ - 1.68, - 0.75 ];
 
 const OVEN_VIEW = VIEWS.oven; // the view of the tray and the oven, once the cookies are all on the tray
-const ROUNDING = 0.0015; // a cookie's middle is this far over what it lies on (see cutting/cuts.js)
 
 // where the tray goes on its way into the oven: in front of the open door, then on the rack
 const OVEN_FRONT = new THREE.Vector3( 1.88, 0.47, - 1.0 );
@@ -57,48 +58,19 @@ let hand3d = null; // the player's hand (see hand.js)
 
 let dragging = null; // what's being dragged: { tray: true } or { knob: true, x, y }
 let overTarget = false; // the tray is over the oven right now
-let carrying = null; // the cookie in the hand: { cookie, index }
 let handShown = false; // the mouse is a hand right now
 let takingOut = false; // the cookies are coming out of the oven (not carried any more, not baked yet)
-let guideKey = ''; // which walking instructions are showing
 let notice = null; // a short message for the hover hint, and for how long
 let noticeFor = 0;
 const trayAt = new THREE.Vector3(); // where a dragged tray is going
-let shown = ''; // what the oven's display shows now
-let knobShownFor = 0; // the display shows the temperature for a moment after the knob's turned
-const SMOKE_ALARM = 0.3; // the alarm goes off when the smoke's this thick
 
+const flatLook = new THREE.Vector3();
 const pointer = new THREE.Vector2( 2, 2 );
 const raycaster = new THREE.Raycaster();
 const trayPlane = new THREE.Plane( UP, - TRAY_HEIGHT );
 const carryAt = new THREE.Vector3();
 
 // ---------- helpers ----------
-// how long they've been in, in whole real seconds: the number on the oven's clock, and the one in
-// the result. From the wall clock (bakeStart is saved, so a refresh doesn't change it), not from
-// the frames, which are capped and slow
-function realSeconds() {
-
-	const { bakeStart } = getState();
-	return bakeStart === null ? 0 : Math.max( 0, Math.floor( ( Date.now() - bakeStart ) / 1000 ) );
-
-}
-
-// how far along they are, where 1 is the start of perfect at the heat the dial shows
-function bakeProgress() {
-
-	return realSeconds() / bakeBand( shownTemperature() ).from;
-
-}
-
-// the cookies still on the dough
-function looseCookies() {
-
-	const { onTray } = getState();
-	return cuts.filter( ( c, i ) => ! onTray.includes( i ) ).map( ( c ) => c.cookie );
-
-}
-
 // the mouse is a hand: from when the cookies are cut until the tray goes in the oven
 function handMode() {
 
@@ -111,28 +83,6 @@ function say( text ) {
 
 	notice = text;
 	noticeFor = 2.5;
-
-}
-
-// how far apart two things are along the floor
-function flat( a, b ) {
-
-	return Math.hypot( a.x - b.x, a.z - b.z );
-
-}
-
-const at = new THREE.Vector3();
-const reach = new THREE.Vector3();
-
-function nearCookie( cookie ) {
-
-	return flat( reachPoint( reach ), cookie.getWorldPosition( at ) ) < REACH;
-
-}
-
-function nearTray() {
-
-	return flat( reachPoint( reach ), tray.centre ) < TRAY_REACH;
 
 }
 
@@ -168,30 +118,6 @@ function lookAtOven( duration = 1.4 ) {
 		controls.target.lerpVectors( fromT, OVEN_VIEW.target, ease( k ) );
 
 	} ).then( () => { controls.enabled = true; } );
-
-}
-
-// a cookie lying flat (as cut: see cutting/cuts.js), and how far it's tilted up towards the
-// player while it's held, so the face of it shows
-const FLAT = new THREE.Quaternion().setFromEuler( new THREE.Euler( - Math.PI / 2, 0, 0 ) );
-const HOLD_TILT = 0.95;
-const tilted = new THREE.Quaternion();
-const towards = new THREE.Vector3();
-
-// fly a cookie to `to` along an arc, back to its own size and lying flat
-function flyCookie( cookie, to, duration = 0.5 ) {
-
-	const from = cookie.position.clone();
-	const fromQ = cookie.quaternion.clone();
-	const size = cookie.scale.x;
-	return animate( duration, ( k ) => {
-
-		cookie.position.lerpVectors( from, to, ease( k ) );
-		cookie.position.y += Math.sin( Math.PI * k ) * 0.12;
-		cookie.scale.setScalar( THREE.MathUtils.lerp( size, 1, ease( k ) ) );
-		cookie.quaternion.slerpQuaternions( fromQ, FLAT, ease( k ) );
-
-	} );
 
 }
 
@@ -233,7 +159,7 @@ function setPointer( e ) {
 		turnKnob( e.clientX - dragging.x, e.clientY - dragging.y );
 		dragging.x = e.clientX;
 		dragging.y = e.clientY;
-		knobShownFor = 1.5;
+		knobTurned();
 
 	}
 
@@ -245,41 +171,36 @@ function drop() {
 	const dropped = dragging;
 	dragging = null;
 	controls.enabled = true;
-	if ( dropped.knob ) setState( { temperature: shownTemperature() } ); // (saved)
-	else dropTray();
+	if ( dropped.knob ) {
+
+		setState( { temperature: shownTemperature() } ); // (saved)
+		if ( getState().baking && ! zoomedOnOven() ) guideBaking(); // (the times are different at this heat)
+
+	} else dropTray();
 
 }
 
-// ---------- carrying the cookies, one by one ----------
-function pickUp( cookie ) {
+// ---------- carrying the cookies, one by one (see carrying.js) ----------
+function pickUpCookie( cookie ) {
 
-	carrying = { cookie, index: cuts.findIndex( ( c ) => c.cookie === cookie ) };
-	guideKey = '';
+	pickUp( cookie );
+	resetGuide();
 
 }
 
 // put it back on the dough where it was cut
-function putBackCarried() {
+function putBackCookie() {
 
-	const { cookie } = carrying;
-	carrying = null;
-	guideKey = '';
-	flyCookie( cookie, cookie.userData.cutAt, 0.6 );
+	putBackCarried();
+	resetGuide();
 
 }
 
 // onto the tray, in the next free place
-async function placeCarried() {
+async function placeCookie() {
 
-	const { cookie, index } = carrying;
-	carrying = null;
-	guideKey = '';
-
-	const onTray = [ ...getState().onTray, index ];
-	setState( { onTray } );
-	const to = slotPosition( tray, onTray.length - 1 ).add( new THREE.Vector3( 0, ROUNDING, 0 ) );
-	await flyCookie( cookie, to, 0.6 );
-	tray.mesh.attach( cookie ); // it goes where the tray goes now
+	await placeCarried();
+	resetGuide();
 
 	// the last one: over to the oven
 	if ( trayReady() ) {
@@ -290,49 +211,6 @@ async function placeCarried() {
 		guideTray();
 
 	}
-
-}
-
-// the cookie in the hand is held under it
-function followHand( dt ) {
-
-	const { cookie } = carrying;
-	hand3d.holdPoint( at );
-	const k = 1 - Math.exp( - dt * 30 );
-	cookie.position.lerp( at, k );
-	cookie.scale.setScalar( THREE.MathUtils.lerp( cookie.scale.x, HOLD_SCALE, k ) );
-
-	// tilted up towards the player
-	towards.subVectors( camera.position, cookie.position ).setY( 0 ).normalize();
-	tilted.setFromAxisAngle( towards.cross( UP ).negate().normalize(), HOLD_TILT ).multiply( FLAT );
-	cookie.quaternion.slerp( tilted, k );
-
-}
-
-const flatLook = new THREE.Vector3();
-const floorAt = new THREE.Vector3();
-
-// where the hand is: on whatever the mouse points at, or on the table or counter below it. null
-// when the mouse is off the page (or a card is open), so the hand isn't drawn
-function handPoint() {
-
-	if ( Math.abs( pointer.x ) > 1 || Math.abs( pointer.y ) > 1 || document.querySelector( '.overlay.show' ) ) return null;
-
-	raycaster.setFromCamera( pointer, camera );
-	const things = [ tray.mesh, ...looseCookies().filter( ( c ) => c !== carrying?.cookie ) ];
-	const hit = raycaster.intersectObjects( things, true )[ 0 ];
-	if ( hit ) return hit.point;
-
-	// the table, or the counter along the back wall
-	for ( const y of [ 0.8, 0.92 ] ) {
-
-		if ( raycaster.ray.intersectPlane( new THREE.Plane( UP, - y ), floorAt ) && ( y === 0.92 || floorAt.z > - 1.35 ) ) break;
-
-	}
-
-	// not too far away (or a ray that never reaches the floor)
-	if ( floorAt.distanceTo( camera.position ) > 1.8 || raycaster.ray.direction.y > - 0.02 ) floorAt.copy( raycaster.ray.origin ).addScaledVector( raycaster.ray.direction, 1.2 );
-	return floorAt;
 
 }
 
@@ -359,7 +237,7 @@ async function putInOven() {
 	await moveTray( tray, OVEN_INSIDE, { duration: 0.6 } );
 	await openDoor( false );
 	setState( { busy: false, baking: true, bakeStart: Date.now(), baked: null } );
-	controls.enabled = true; // (the view was pinned while the tray waited to go in)
+	controls.enabled = true;
 	guideBaking();
 
 }
@@ -409,40 +287,6 @@ function bakeAgain() {
 
 }
 
-// ---------- the tutorial ----------
-// what to do next, depending on whether a cookie is in the hand and how close the player is
-function guideCarrying() {
-
-	const near = carrying ? nearTray() : looseCookies().some( nearCookie );
-	const key = `${ carrying ? 'carry' : 'empty' }-${ near }`;
-	if ( key === guideKey ) return;
-	guideKey = key;
-
-	const guides = {
-		'empty-false': [ 'Walk to the dough to pick up the cookies', 'Use the arrow keys or W A S D to walk ahead, back, left and right' ],
-		'empty-true': [ 'Click a cookie to pick it up', 'Then walk with the arrow keys to the baking tray next to the oven' ],
-		'carry-false': [ 'Carry the cookie to the baking tray', 'Walk with the arrow keys or W A S D, towards the oven. Esc puts the cookie back' ],
-		'carry-true': [ 'Click the baking tray to put the cookie down', 'Then walk back to the dough for the next one' ],
-	};
-	const [ text, small ] = guides[ key ];
-	showGuide( { text, small, motion: 'drag' } );
-
-}
-
-function guideTray() {
-
-	guideKey = 'tray';
-	showGuide( { text: 'Now put the tray in the oven', small: 'Hold the mouse on the baking tray and drag it into the oven', motion: 'drag' } );
-
-}
-
-function guideBaking() {
-
-	showGuide( { text: 'Keep an eye on the clock!', small: `${ bakeBand( NORMAL ).from }-${ bakeBand( NORMAL ).to } seconds at ${ NORMAL }° makes them perfect (${ bakeBand( 250 ).from }-${ bakeBand( 250 ).to } above 200°). Click the oven to take them out`, motion: 'circle' } );
-	setTimeout( () => { if ( getState().baking ) hideGuide(); }, 9000 );
-
-}
-
 // ---------- hooks for interaction.js ----------
 // the hover hint: { text, clickable }, false to show nothing, null if it's not about this step
 export function bakingHint( ray ) {
@@ -473,7 +317,7 @@ export function bakingHint( ray ) {
 	}
 
 	const onTrayNow = onCookie || hit.object === tray.mesh || hit.object.parent === tray.mesh;
-	if ( carrying ) {
+	if ( carried() ) {
 
 		if ( ! onTrayNow ) return { text: 'Walk to the baking tray next to the oven · Esc puts the cookie back', clickable: false };
 		return nearTray()
@@ -506,10 +350,10 @@ export function tryBakingClick( ray ) {
 
 	if ( handMode() && ! trayReady() && ! busy ) {
 
-		if ( carrying ) {
+		if ( carried() ) {
 
 			if ( ! hitsTray( ray ) ) return true;
-			if ( nearTray() ) placeCarried();
+			if ( nearTray() ) placeCookie();
 			else say( 'too far from the baking tray: walk closer with the arrow keys' );
 			return true;
 
@@ -518,7 +362,7 @@ export function tryBakingClick( ray ) {
 		const hit = ray.intersectObjects( looseCookies(), false )[ 0 ];
 		if ( hit ) {
 
-			if ( nearCookie( hit.object ) ) pickUp( hit.object );
+			if ( nearCookie( hit.object ) ) pickUpCookie( hit.object );
 			else say( 'too far from the dough: walk closer with the arrow keys' );
 			return true;
 
@@ -546,6 +390,9 @@ export function initBaking( { room, camera: cam, controls: ctrl } ) {
 	if ( ! tray ) return;
 	hand3d = new Hand();
 	room.add( hand3d.root );
+	initCarrying( { camera, tray, hand: hand3d, pointer, raycaster } );
+	initGuides( camera );
+	initOvenDisplay( camera );
 	addSolids( room );
 	initOven( room );
 	initKnob( room );
@@ -556,7 +403,7 @@ export function initBaking( { room, camera: cam, controls: ctrl } ) {
 	window.addEventListener( 'pointermove', setPointer );
 	window.addEventListener( 'pointerup', () => { if ( dragging ) drop(); } );
 	window.addEventListener( 'blur', () => { if ( dragging ) { overTarget = false; drop(); } } );
-	window.addEventListener( 'keydown', ( e ) => { if ( e.key === 'Escape' && carrying ) putBackCarried(); } );
+	window.addEventListener( 'keydown', ( e ) => { if ( e.key === 'Escape' && carried() ) putBackCookie(); } );
 
 	// how far it got before a page refresh
 	const { cut } = getState();
@@ -616,9 +463,7 @@ export function updateBaking( dt ) {
 
 	if ( ! tray ) return;
 
-	// the view stays put while the tray is waiting to go in the oven, so it's easy to line it up
-	// (it's let go again once the tray is in, see drop())
-	if ( trayReady() ) controls.enabled = false;
+	updateBakingGuide();
 
 	// a dragged tray follows the mouse just over the counter
 	if ( dragging?.tray ) {
@@ -643,7 +488,7 @@ export function updateBaking( dt ) {
 
 		handShown = hand;
 		enableWalking( hand );
-		if ( ! hand ) guideKey = '';
+		if ( ! hand ) resetGuide();
 
 		// the view comes down to eye level for walking about (unless the tray's already full and
 		// the view is on the oven)
@@ -658,51 +503,20 @@ export function updateBaking( dt ) {
 	const point = handMode() ? handPoint() : null;
 	camera.getWorldDirection( flatLook ).setY( 0 );
 	if ( flatLook.lengthSq() < 1e-6 ) flatLook.set( 0, 0, - 1 );
-	hand3d.update( dt, { point, look: flatLook.normalize(), grip: carrying || dragging?.tray ? GRIP : 0.12 } );
+	hand3d.update( dt, { point, look: flatLook.normalize(), grip: carried() || dragging?.tray ? GRIP : 0.12 } );
 	document.body.classList.toggle( 'hand-mode', hand3d.show );
 
 	if ( hand ) {
 
 		const free = ! getState().busy && ! dragging;
 		if ( free ) updateWalking( dt );
-		if ( carrying ) followHand( dt );
+		if ( carried() ) followHand( dt );
 		if ( free && ! trayReady() ) guideCarrying();
 
 	}
 
-	// in the oven: the clock is the real time since they went in (see realSeconds)
-	const { baking } = getState();
-	const s = baking ? realSeconds() : 0;
-	const band = bakeBand( shownTemperature() );
-	if ( baking ) bakeLevel.value = bakeProgress();
-
-	// the oven's display: the temperature for a moment after the knob's turned (and whenever
-	// it's not baking), otherwise the clock
-	knobShownFor -= dt;
-	const showKnob = dragging?.knob || knobShownFor > 0 || ! baking;
-	const text = showKnob ? `${ shownTemperature() }°` : clock( s );
-	const warn = ! showKnob && s > band.to;
-	if ( text + warn !== shown ) {
-
-		shown = text + warn;
-		showOnDisplay( text, { warn } );
-
-	}
-
-	// the fire: higher the hotter the oven's set, flaring when the door opens; it follows the
-	// mouse while that's over the oven
+	// the clock, the display, the fire and the smoke (see ovenDisplay.js)
 	raycaster.setFromCamera( pointer, camera );
-	const overOven = ! dragging && hitsOven( raycaster );
-	updateFlames( dt, { target: baking ? 1 : 0, hot: heatLevel(), ray: raycaster.ray, overOven } );
-	setHeat( ( baking ? 0.4 + 0.9 * heatLevel() : 0 ) + flareLevel(), performance.now() / 1000 );
-
-	// smoke (a Shadertoy shader too, see shaders/smoke.js): from the last perfect second, as they
-	// start to burn, thicker and darker until they're black; it clears once they're out, or for a while
-	// when it's waved away. Thick smoke sets off the alarm and hides the clock
-	const smoking = baking ? THREE.MathUtils.clamp( ( s - ( band.to - 1 ) ) / 15, 0, 1 ) : 0;
-	updateSmoke( dt, { target: smoking, darkness: THREE.MathUtils.clamp( ( s - band.to ) / 10, 0, 1 ), ray: raycaster.ray, camera } );
-	const smoke = smokeLevel();
-	setAlarm( baking && smoke > SMOKE_ALARM ); // (only while it's baking: once the cookies are out it's quiet at once)
-	if ( baking ) showOvenTimer( s, { temperature: shownTemperature(), smoke, alarm: smoke > SMOKE_ALARM } );
+	updateOven( dt, { knobHeld: !! dragging?.knob, ray: raycaster.ray, overOven: ! dragging && hitsOven( raycaster ) } );
 
 }
