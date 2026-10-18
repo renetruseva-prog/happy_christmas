@@ -23,10 +23,27 @@ html, body { margin: 0; overflow: hidden; background: #0d0a08; }
 }
 /* what's not being shown takes no room in the stack */
 #status:empty, #hint:empty, #status[style*="opacity: 0;"], #hint[style*="opacity: 0;"] { display: none; }
-#bottom-stack #camera-btn { position: static; }
+/* the progress ("Mixing the dough") at the top in the middle, with the "mix with your hand"
+   button next to it on the right */
+/* the cookie counter and the oven clock are under it, in the same column, so none of them
+   can cover another */
+#top-bar {
+  position: fixed; left: 50%; top: 20px; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  width: max-content; max-width: calc(100vw - 24px); pointer-events: none;
+}
+#top-bar .row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
+#top-bar #camera-btn { position: static; }
+#top-bar #camera-btn:not(.show) { display: none; } /* (invisible, it would still push the status off centre) */
+#top-bar #cookie-counter, #top-bar #oven-timer { position: static; transform: none; }
+#top-bar #cookie-counter:not(.show), #top-bar #oven-timer:not(.show) { display: none; }
+/* the perfect-bake banner is in the same column, under the others */
+#top-bar #baked-toast, #top-bar #baked-toast.show { position: static; transform: none; }
+#top-bar #baked-toast:not(.show) { display: none; }
+#top-bar #cookie-counter.show, #top-bar #oven-timer.show { transform: none; }
 /* camera mixing: the button to switch it on, and a mirrored preview with the tracked hand */
 #camera-btn {
-  position: fixed; right: 20px; top: 20px; /* (placed in the bottom stack, see below) */
+  position: fixed; right: 20px; top: 20px; /* (placed in the top bar, see below) */
   padding: 8px 16px; border: 0; border-radius: 999px;
   background: rgba(179, 32, 42, 0.9); color: #fff3e6;
   font: 600 14px/1.2 system-ui, sans-serif; cursor: pointer;
@@ -34,8 +51,10 @@ html, body { margin: 0; overflow: hidden; background: #0d0a08; }
 }
 #camera-btn.show { opacity: 1; pointer-events: auto; }
 /* sound settings, on the left: music and sounds each get an on/off button and a volume slider */
+/* the restart panel, with the sound panel under it, on the left */
+#side-panels { position: fixed; left: 20px; top: 20px; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+#restart-panel { padding: 8px 10px; border-radius: 14px; background: rgba(20, 12, 8, 0.65); }
 #sound-panel {
-  position: fixed; left: 20px; top: 76px; z-index: 5;
   display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 14px;
   background: rgba(20, 12, 8, 0.65); color: #ffe8c8; font: 500 12px/1.2 system-ui, sans-serif;
 }
@@ -44,6 +63,8 @@ html, body { margin: 0; overflow: hidden; background: #0d0a08; }
   width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; font-size: 14px; line-height: 1;
   background: rgba(255, 243, 230, 0.15); color: #fff3e6; cursor: pointer;
 }
+#restart-btn { padding: 7px 14px; border: 0; border-radius: 999px; background: rgba(255, 243, 230, 0.15); color: #fff3e6; font: 600 12px/1 system-ui, sans-serif; cursor: pointer; }
+#restart-btn:hover { background: rgba(255, 243, 230, 0.3); }
 #sound-panel button:hover { background: rgba(255, 243, 230, 0.3); }
 #sound-panel input[type=range] { width: 100%; accent-color: #d9503f; cursor: pointer; }
 #sound-panel .row.off { opacity: 0.55; }
@@ -122,7 +143,7 @@ html, body { margin: 0; overflow: hidden; background: #0d0a08; }
 
 /* the "perfectly baked" confirmation, when the cookies come out just right */
 #baked-toast {
-  position: fixed; left: 50%; top: 22px; z-index: 5; transform: translate(-50%, -14px);
+  position: fixed; left: 50%; top: 76px; z-index: 5; transform: translate(-50%, -14px); /* (under the top bar's status) */
   max-width: calc(100vw - 32px); box-sizing: border-box; padding: 12px 24px; border-radius: 18px; text-align: center;
   display: flex; flex-direction: column; gap: 2px; background: rgba(36, 104, 52, 0.95); color: #f1ffe9;
   font: 500 14px/1.3 system-ui, sans-serif; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
@@ -130,7 +151,6 @@ html, body { margin: 0; overflow: hidden; background: #0d0a08; }
 }
 #baked-toast b { font-size: 20px; color: #ffffff; }
 #baked-toast.show { opacity: 1; transform: translate(-50%, 0); }
-@media (max-width: 900px) { #baked-toast { top: 66px; } }
 
 /* the oven clock while the cookies bake */
 #oven-timer {
@@ -265,6 +285,24 @@ body.decorating #bottom-stack { bottom: calc(var(--dock, 0px) + 28px); }
 }
 #card-message:focus-visible { outline: 2px solid #ffb35c; outline-offset: 2px; }
 .count-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #d9bfa0; font-variant-numeric: tabular-nums; margin-top: -4px; }
+/* "Share your card": a drop-down list of where to send it */
+.share-drop { position: relative; }
+#card-share::after { content: "▾"; margin-left: 8px; display: inline-block; transition: transform 0.15s; }
+#card-share[aria-expanded="true"]::after { transform: rotate(180deg); }
+.share-sites {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 5; display: flex; flex-direction: column;
+  padding: 6px; border-radius: 14px; background: #2a1a12; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 232, 200, 0.2);
+}
+.share-sites[hidden], .share-sites button[hidden] { display: none; }
+.share-sites button {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-radius: 9px;
+  background: transparent; color: #ffe8c8; font: 500 15px/1.2 system-ui, sans-serif; text-align: left; cursor: pointer; box-shadow: none;
+}
+.share-sites button:hover, .share-sites button:focus-visible { background: rgba(255, 232, 200, 0.14); outline: none; }
+.share-sites button::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; background: #d9bfa0; }
+.share-sites [data-site="facebook"]::before { background: #1877f2; }
+.share-sites [data-site="instagram"]::before { background: linear-gradient(45deg, #f09433, #dc2743 55%, #bc1888); }
+.menu-label { padding: 8px 12px 2px; font: 700 11px/1 system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #d9bfa0; }
 .share-more { display: flex; gap: 8px; }
 .share-more button { flex: 1; background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
 .share-more button[hidden] { display: none; }
@@ -327,7 +365,6 @@ body.hand-mode { cursor: none !important; }
 /* smaller windows, which is also what zooming the page in makes: the top panels move onto
    their own rows, the keys guide shrinks, and the bottom panels move up out of its way */
 @media (max-width: 900px) {
-  #cookie-counter, #oven-timer { top: 66px; }
 }
 @media (max-width: 960px) {
   /* the keys guide goes to the right edge, small, so the bottom stays clear */

@@ -18,6 +18,11 @@ const shareButton = document.getElementById( 'card-share' );
 
 let front = null; // the card's canvases
 let back = null;
+// the pictures to send, made as soon as the card is drawn (not when "share" is pressed: the wait
+// made the share sheet slow to come up, and a browser only lets a press open it right away)
+let frontFile = null;
+let backFile = null;
+let frontPng = null;
 let redraw = 0;
 let closed = () => {};
 
@@ -58,10 +63,17 @@ function showCanvas( image, canvas ) {
 
 }
 
+function jpegFile( canvas, name ) {
+
+	return toBlob( canvas, 'image/jpeg' ).then( ( blob ) => new File( [ blob ], name, { type: 'image/jpeg' } ) );
+
+}
+
 function drawMessage() {
 
 	back = drawBack( message.value );
 	showCanvas( backImage, back );
+	backFile = jpegFile( back, 'happy-christmas-card-back.jpg' );
 
 }
 
@@ -72,10 +84,9 @@ function turn( toBack ) {
 
 }
 
-async function files() {
+function files() {
 
-	const [ f, b ] = await Promise.all( [ toBlob( front ), toBlob( back ) ] );
-	return [ new File( [ f ], 'happy-christmas-card.png', { type: 'image/png' } ), new File( [ b ], 'happy-christmas-card-back.png', { type: 'image/png' } ) ];
+	return Promise.all( [ frontFile, backFile ] );
 
 }
 
@@ -100,8 +111,9 @@ async function downloadCard() {
 
 // the device's share sheet: both sides if it can take two pictures, otherwise the front with the
 // message as the text; if there's no share sheet, the card's downloaded instead
-async function shareCard() {
+async function shareCard( frontOnly = false ) {
 
+	if ( ! frontFile ) return; // (the card isn't drawn yet)
 	say( 'Getting your card ready…' );
 	const [ cardFront, cardBack ] = await files();
 	const text = `${ message.value.trim() || DEFAULT_MESSAGE } Happy Christmas!`;
@@ -109,7 +121,7 @@ async function shareCard() {
 	const one = { files: [ cardFront ], title: 'Happy Christmas!', text };
 	try {
 
-		if ( navigator.canShare?.( both ) ) await navigator.share( both );
+		if ( ! frontOnly && navigator.canShare?.( both ) ) await navigator.share( both );
 		else if ( navigator.canShare?.( one ) ) await navigator.share( one );
 		else {
 
@@ -131,11 +143,54 @@ async function shareCard() {
 
 }
 
+// Facebook and Instagram can't be handed a picture (or told which friend to send it to) by a web
+// page: that takes their own apps. So on a phone or tablet the share sheet does it (pick the app, then
+// Feed or Stories, or a friend). On a computer the card goes on the clipboard (or downloads), and
+// the right page opens: a new post, or the messages, where they pick the friend and paste it
+const SITES = {
+	facebook: { name: 'Facebook', photo: 'https://www.facebook.com/', message: 'https://www.messenger.com/' },
+	instagram: { name: 'Instagram', photo: 'https://www.instagram.com/', message: 'https://www.instagram.com/direct/inbox/' },
+};
+
+function touchDevice() {
+
+	return navigator.maxTouchPoints > 0 && !! navigator.canShare;
+
+}
+
+async function shareTo( site, mode ) {
+
+	if ( ! frontFile ) return;
+	const { name, [ mode ]: url } = SITES[ site ];
+	const app = mode === 'message' && site === 'facebook' ? 'Messenger' : name;
+	if ( touchDevice() ) {
+
+		say( mode === 'message' ? `Pick ${ app } from the list, then the friend to send it to.` : `Pick ${ name } from the list, then Feed or Stories.` );
+		return shareCard( true ); // (the front alone: that's the picture Instagram and Facebook take)
+
+	}
+
+	window.open( url, '_blank', 'noopener' ); // (straight away: a page only gets to open one from a press)
+	const where = mode === 'message' ? 'open a chat with a friend' : 'start a new post';
+	try {
+
+		await navigator.clipboard.write( [ new ClipboardItem( { 'image/png': frontPng } ) ] );
+		say( `${ app } is open: ${ where } and paste your card (Ctrl or ⌘ + V).` );
+
+	} catch {
+
+		await downloadCard();
+		say( `${ app } is open, and your card is downloading: ${ where } and add it from there.` );
+
+	}
+
+}
+
 async function copyCard() {
 
 	try {
 
-		await navigator.clipboard.write( [ new ClipboardItem( { 'image/png': toBlob( front ) } ) ] );
+		await navigator.clipboard.write( [ new ClipboardItem( { 'image/png': frontPng } ) ] );
 		say( 'Copied! Paste it into a post or a message.' );
 
 	} catch {
@@ -153,6 +208,7 @@ export async function openShare( cookies, onClose = () => {} ) {
 	overlay.classList.add( 'show', 'snapping' );
 	turn( false );
 	say( '' );
+	document.getElementById( 'share-menu' ).hidden = true;
 	message.value = saved().slice( 0, MESSAGE_LENGTH );
 	count.textContent = `${ message.value.length }/${ MESSAGE_LENGTH }`;
 
@@ -160,6 +216,8 @@ export async function openShare( cookies, onClose = () => {} ) {
 	const photo = await snapCookies( cookies );
 	front = drawFront( photo );
 	showCanvas( frontImage, front );
+	frontFile = jpegFile( front, 'happy-christmas-card.jpg' );
+	frontPng = toBlob( front );
 	drawMessage();
 	overlay.classList.remove( 'snapping' );
 	shareButton.focus();
@@ -188,7 +246,21 @@ export function initShare() {
 
 	flip.addEventListener( 'click', () => turn( ! flip.classList.contains( 'turned' ) ) );
 	document.getElementById( 'card-turn' ).addEventListener( 'click', () => turn( ! flip.classList.contains( 'turned' ) ) );
-	shareButton.addEventListener( 'click', shareCard );
+	// "Share your card" opens the list of where to send it
+	const menu = document.getElementById( 'share-menu' );
+	const showMenu = ( on ) => {
+
+		menu.hidden = ! on;
+		shareButton.setAttribute( 'aria-expanded', String( on ) );
+
+	};
+
+	if ( ! navigator.canShare ) document.getElementById( 'card-native' ).hidden = true; // (no share sheet in this browser)
+	shareButton.addEventListener( 'click', () => showMenu( menu.hidden ) );
+	window.addEventListener( 'pointerdown', ( e ) => { if ( ! e.target.closest( '.share-drop' ) ) showMenu( false ); } ); // (a click elsewhere closes it)
+	menu.addEventListener( 'click', ( e ) => { if ( e.target.closest( 'button' ) ) showMenu( false ); } );
+	document.getElementById( 'card-native' ).addEventListener( 'click', () => shareCard() );
+	for ( const item of document.querySelectorAll( '#share-menu [data-site]' ) ) item.addEventListener( 'click', () => shareTo( item.dataset.site, item.dataset.mode ) );
 	document.getElementById( 'card-download' ).addEventListener( 'click', downloadCard );
 	document.getElementById( 'card-copy' ).addEventListener( 'click', copyCard );
 	document.getElementById( 'share-close' ).addEventListener( 'click', close );

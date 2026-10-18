@@ -239,6 +239,12 @@ bakeDecorate.addEventListener( 'click', () => {
 	onDecorate();
 
 } );
+document.getElementById( 'restart-btn' ).addEventListener( 'click', ( e ) => {
+
+	e.currentTarget.blur(); // (so the keyboard doesn't press it again)
+	if ( confirm( 'Start over? Everything you baked so far will be cleared.' ) ) resetProgress();
+
+} );
 document.getElementById( 'bake-over' ).addEventListener( 'click', () => resetProgress() );
 
 // { result, seconds }; again(): bake another batch; decorate(): on to the icing (perfectly baked

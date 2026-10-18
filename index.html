@@ -5,15 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cookie Baking Simulator</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <!-- the Christmas card's lettering (see src/decorating/card.js) -->
+    <!-- the Christmas card's lettering (see src/decorating/cardArt.js) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Mountains+of+Christmas:wght@700&display=swap" />
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
+    <div id="top-bar">
+      <div class="row">
+        <div id="status"></div>
+        <button id="camera-btn" type="button">Mix with your hand (C)</button>
+      </div>
+      <div id="cookie-counter" aria-live="polite"><span class="slots"></span><span><b id="cookie-count">0 / 6</b> cookies</span></div>
+      <div id="oven-timer" aria-live="polite"><span id="oven-label">In the oven</span><b id="oven-time">0:00</b></div>
+      <div id="baked-toast" role="status" aria-live="polite"><b>Perfectly baked!</b><span id="baked-toast-text"></span></div>
+    </div>
     <div id="bottom-stack">
-      <div id="status"></div>
       <div id="tutorial" aria-live="polite">
         <svg viewBox="0 0 64 64" aria-hidden="true">
           <!-- going round (mixing) -->
@@ -41,12 +49,14 @@
         </svg>
         <div><b id="tutorial-text"></b><small id="tutorial-small"></small></div>
       </div>
-      <button id="camera-btn" type="button">Mix with your hand (C)</button>
       <div id="hint"></div>
     </div>
+    <div id="side-panels">
+    <div id="restart-panel"><button id="restart-btn" type="button">&#8635; Restart</button></div>
     <div id="sound-panel" aria-label="Sound settings">
-      <div class="row" data-bus="music"><button type="button" aria-label="Music on or off">🎵</button><span>Music</span><input type="range" min="0" max="100" step="1" aria-label="Music volume"></div>
+      <div class="row" data-bus="music"><button type="button" aria-label="Music on or off">🎶</button><span>Music</span><input type="range" min="0" max="100" step="1" aria-label="Music volume"></div>
       <div class="row" data-bus="sfx"><button type="button" aria-label="Sounds on or off">🔊</button><span>Sounds</span><input type="range" min="0" max="100" step="1" aria-label="Sounds volume"></div>
+    </div>
     </div>
     <div id="camera"><video playsinline muted></video><canvas></canvas></div>
 
@@ -59,8 +69,6 @@
       </div>
       <p>Walk around the room</p>
     </div>
-
-    <div id="cookie-counter" aria-live="polite"><span class="slots"></span><span><b id="cookie-count">0 / 6</b> cookies</span></div>
 
     <div id="welcome" class="overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
       <div class="card">
@@ -99,8 +107,6 @@
       </div>
     </div>
 
-    <div id="baked-toast" role="status" aria-live="polite"><b>Perfectly baked!</b><span id="baked-toast-text"></span></div>
-    <div id="oven-timer" aria-live="polite"><span id="oven-label">In the oven</span><b id="oven-time">0:00</b></div>
 
     <div id="bake-result" class="overlay" role="dialog" aria-modal="true" aria-labelledby="bake-result-title">
       <div class="card">
@@ -169,7 +175,18 @@
             <label for="card-message">Your message, on the back of the card</label>
             <textarea id="card-message" rows="4" maxlength="150" placeholder="Merry Christmas! I baked these just for you."></textarea>
             <div class="count-row"><button id="card-turn" class="link" type="button">Show the back</button><span id="card-count">0/150</span></div>
-            <button id="card-share" type="button">Share your card</button>
+            <div class="share-drop">
+            <button id="card-share" type="button" aria-haspopup="true" aria-expanded="false">Share your card</button>
+            <div id="share-menu" class="share-sites" role="menu" hidden>
+              <button id="card-native" type="button" role="menuitem">Send with AirDrop, messages, mail…</button>
+              <span class="menu-label" role="presentation">Facebook</span>
+              <button data-site="facebook" data-mode="photo" type="button" role="menuitem">Post it as a photo</button>
+              <button data-site="facebook" data-mode="message" type="button" role="menuitem">Message it to a friend</button>
+              <span class="menu-label" role="presentation">Instagram</span>
+              <button data-site="instagram" data-mode="photo" type="button" role="menuitem">Post it as a photo</button>
+              <button data-site="instagram" data-mode="message" type="button" role="menuitem">Message it to a friend</button>
+            </div>
+            </div>
             <div class="share-more">
               <button id="card-download" type="button">Download</button>
               <button id="card-copy" type="button">Copy picture</button>
