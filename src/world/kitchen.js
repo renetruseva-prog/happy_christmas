@@ -1,7 +1,7 @@
 // loads the Blender kitchen and prepares its materials, lights and camera
 import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { LIGHT_SCALE, BAKE_BOOST, PENDANT_LIGHT, PENDANT_BULB_GLOW } from './config.js';
+import { LIGHT_SCALE, BAKE_BOOST, PENDANT_LIGHT, PENDANT_BULB_GLOW } from '../core/config.js';
 import { trackLight, trackBulb } from './lights.js';
 import { paperSack } from './paperSack.js';
 

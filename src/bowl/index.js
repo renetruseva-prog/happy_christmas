@@ -6,8 +6,8 @@
 //   particles.js falling grains, flour dust and the flour stream
 //   pour.js / egg.js / butter.js  each ingredient going in
 import * as THREE from 'three/webgpu';
-import { cancelTween } from '../tween.js';
-import { ease } from '../sequence.js';
+import { cancelTween } from '../core/tween.js';
+import { ease } from '../core/sequence.js';
 import { initContents, bowl, layers, solids, surfaceY, Layer } from './contents.js';
 import { initMaterials, materials, swirl } from './materials.js';
 import { DoughBody } from './doughBody.js';

@@ -20,5 +20,5 @@ a seamless loop. Check each file's licence before you ship it.
 | `fail` | underbaked or burnt |
 | `squeeze`, `click` | spare, for the icing and buttons (not wired yet) |
 
-Sound settings: the panel on the left (music and sounds each have on/off and a volume slider), or press M for everything off/on. Sounds and the call names are in `src/audio.js`; what
-triggers them is in `src/sounds.js`.
+Sound settings: the panel on the left (music and sounds each have on/off and a volume slider), or press M for everything off/on. Sounds and the call names are in `src/audio/audio.js`; what
+triggers them is in `src/audio/sounds.js`.

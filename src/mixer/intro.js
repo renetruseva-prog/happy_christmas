@@ -1,8 +1,8 @@
 // "Time to mix the dough!": the card that asks whether to mix with your hand (webcam) or the mouse.
 // Choosing the camera asks the browser for it; if that's refused (or there's no webcam), the card
 // says so and carries on with the mouse. Either way, onDone() is called when the card closes.
-import { setState } from '../state.js';
-import { startHandTracking } from '../handTracking.js';
+import { setState } from '../core/state.js';
+import { startHandTracking } from '../input/handTracking.js';
 
 const card = document.getElementById( 'mix-intro' );
 const note = document.getElementById( 'mix-intro-note' );

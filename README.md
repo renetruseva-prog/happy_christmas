@@ -24,8 +24,8 @@ The whole game is hands-on: carry ingredients over the bowl and let go, hold the
 
 ### Physics
 
-Rigid bodies run on [Rapier](https://rapier.rs/) (`@dimforge/rapier3d-compat`), stepped at a fixed 60 Hz from the frame loop ([`src/physics.js`](src/physics.js)). The table, the bowl (its real mesh shape) and the floor are fixed colliders, with invisible walls round the table's edge.
-- **Dropped ingredients** tumble on the table before returning to their spot. Eggs and the sugar jar **break** if they hit it hard: shards fly out ([`src/debris.js`](src/debris.js)), "Ouch! Try again." shows and a fresh one appears on the shelf.
+Rigid bodies run on [Rapier](https://rapier.rs/) (`@dimforge/rapier3d-compat`), stepped at a fixed 60 Hz from the frame loop ([`src/world/physics.js`](src/world/physics.js)). The table, the bowl (its real mesh shape) and the floor are fixed colliders, with invisible walls round the table's edge.
+- **Dropped ingredients** tumble on the table before returning to their spot. Eggs and the sugar jar **break** if they hit it hard: shards fly out ([`src/world/debris.js`](src/world/debris.js)), "Ouch! Try again." shows and a fresh one appears on the shelf.
 - **Mixing:** the harder and faster you circle, the more dough the beaters fling out of the bowl ([`src/mixer/splatter.js`](src/mixer/splatter.js)). The blobs bounce off the bowl and land on the table, where you can drag them off.
 - The dough's surface itself is a hand-written soft-body (springs and waves, [`src/bowl/doughBody.js`](src/bowl/doughBody.js)), and the falling chips and sprinkles use a small custom simulation ([`src/decorating/pieces.js`](src/decorating/pieces.js)), since Rapier has no soft bodies.
 
@@ -40,7 +40,7 @@ The kitchen, the ingredients, the props and the oven were modelled in Blender an
 
 Two animation clips were keyframed in Blender and are played from the game:
 - **`oven_door_open`** ([`public/models/oven_door.glb`](public/models/oven_door.glb)) swings the oven door on its hinge. The code scrubs the clip's time, so it opens and closes with the tray and stays in step with the flames and smoke ([`src/baking/oven.js`](src/baking/oven.js)).
-- **`pendant_swing`** ([`public/models/pendant_swing.glb`](public/models/pendant_swing.glb)) swings the lamp over the table, with its light and shadows, whenever an egg or the sugar jar breaks into a surface that's not the table ([`src/pendant.js`](src/pendant.js)).
+- **`pendant_swing`** ([`public/models/pendant_swing.glb`](public/models/pendant_swing.glb)) swings the lamp over the table, with its light and shadows, whenever an egg or the sugar jar breaks into a surface that's not the table ([`src/world/pendant.js`](src/world/pendant.js)).
 
 The clips are exported on their own (not inside the kitchen file), so the baked kitchen doesn't have to be re-exported when an animation changes. If a clip can't load, the oven door falls back to a code-driven swing.
 
@@ -80,12 +80,27 @@ The webcam mixing mode is optional. It loads MediaPipe's hand-tracking files fro
 
 ```
 main.js            starts everything and runs the frame loop
-src/physics.js     the Rapier world      src/debris.js   broken eggs and jars
-src/pendant.js     the swinging lamp (Blender clip)
+index.html         the page: the cards and panels over the game
+src/styles.css     how the page looks
+src/ui.js          the status line, tutorial cards and result cards
+src/ingredients.js picking ingredients up and putting them in the bowl
+
+src/core/          what everything else builds on: stage.js (renderer, camera, glow), state.js
+                   (the game's state), config.js, progress.js (saved progress), sequence.js and
+                   tween.js (animations), views.js (camera moves), table.js
+src/world/         the kitchen and what lives in it: kitchen.js, christmas.js, lights.js,
+                   reflections.js, solids.js, paperSack.js, pendant.js (the swinging lamp, a Blender
+                   clip), physics.js (the Rapier world) and debris.js (broken eggs and jars)
+src/input/         how the player acts: interaction.js (hover hints and clicks), heldTool.js (the
+                   mixer and rolling pin in hand), walking.js, handTracking.js (webcam)
+src/audio/         audio.js (sounds and music) and sounds.js (what triggers them)
 src/shaders/       the two ported Shadertoy shaders
+
 src/bowl/          the ingredients, and the dough's soft body
-src/mixer/         the hand mixer      src/rolling/   rolling the dough
-src/cutting/       cutting the cookies
-src/baking/        the oven, knob, flames, smoke, alarm and the hand
-src/decorating/    icing, chips, sprinkles and the Christmas card
+src/mixer/         the hand mixer          src/rolling/   rolling the dough
+src/cutting/       cutting the cookies, with a star cutter or a shape of your own (drawn freehand)
+src/baking/        the oven, knob, flames, smoke, alarm and the hand; carrying.js (cookies to the
+                   tray), guides.js (tutorial cards) and ovenDisplay.js (the clock and fire)
+src/decorating/    icing, chips, sprinkles and the Christmas card (cardPhoto.js: the photo on the
+                   plate; cardArt.js: the card itself; share.js: sending it)
 ```

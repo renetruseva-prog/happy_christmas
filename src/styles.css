@@ -1,0 +1,397 @@
+/* the page's look: the cards and panels over the game (the 3D scene is drawn by three.js) */
+html, body { margin: 0; overflow: hidden; background: #0d0a08; }
+/* the tutorial and the hover hint share one column at the bottom, so they stack and can
+   never overlap, whatever they say or however small the window is */
+#bottom-stack {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  width: max-content; max-width: calc(100vw - 24px); pointer-events: none;
+}
+#hint {
+  max-width: 100%; box-sizing: border-box; text-align: center;
+  padding: 8px 16px; border-radius: 18px;
+  background: rgba(20, 12, 8, 0.75); color: #ffe8c8;
+  font: 500 14px/1.25 system-ui, sans-serif; text-transform: capitalize;
+  pointer-events: none; opacity: 0; transition: opacity 0.15s;
+}
+#status {
+  max-width: 100%; box-sizing: border-box; text-align: center;
+  padding: 8px 16px; border-radius: 18px;
+  background: rgba(20, 12, 8, 0.75); color: #ffe8c8;
+  font: 500 14px/1.25 system-ui, sans-serif;
+  pointer-events: none; opacity: 0; transition: opacity 0.3s;
+}
+/* what's not being shown takes no room in the stack */
+#status:empty, #hint:empty, #status[style*="opacity: 0;"], #hint[style*="opacity: 0;"] { display: none; }
+/* the progress ("Mixing the dough") at the top in the middle, with the "mix with your hand"
+   button next to it on the right */
+/* the cookie counter and the oven clock are under it, in the same column, so none of them
+   can cover another */
+#top-bar {
+  position: fixed; left: 50%; top: 20px; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  width: max-content; max-width: calc(100vw - 24px); pointer-events: none;
+}
+#top-bar .row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
+#top-bar #camera-btn { position: static; }
+#top-bar #camera-btn:not(.show) { display: none; } /* (invisible, it would still push the status off centre) */
+#top-bar #cookie-counter, #top-bar #oven-timer { position: static; transform: none; }
+#top-bar #cookie-counter:not(.show), #top-bar #oven-timer:not(.show) { display: none; }
+/* the perfect-bake banner is in the same column, under the others */
+#top-bar #baked-toast, #top-bar #baked-toast.show { position: static; transform: none; }
+#top-bar #baked-toast:not(.show) { display: none; }
+#top-bar #cookie-counter.show, #top-bar #oven-timer.show { transform: none; }
+/* camera mixing: the button to switch it on, and a mirrored preview with the tracked hand */
+#camera-btn {
+  position: fixed; right: 20px; top: 20px; /* (placed in the top bar, see below) */
+  padding: 8px 16px; border: 0; border-radius: 999px;
+  background: rgba(179, 32, 42, 0.9); color: #fff3e6;
+  font: 600 14px/1.2 system-ui, sans-serif; cursor: pointer;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+#camera-btn.show { opacity: 1; pointer-events: auto; }
+/* sound settings, on the left: music and sounds each get an on/off button and a volume slider */
+/* the restart panel, with the sound panel under it, on the left */
+#side-panels { position: fixed; left: 20px; top: 20px; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+#restart-panel { padding: 8px 10px; border-radius: 14px; background: rgba(20, 12, 8, 0.65); }
+#sound-panel {
+  display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 14px;
+  background: rgba(20, 12, 8, 0.65); color: #ffe8c8; font: 500 12px/1.2 system-ui, sans-serif;
+}
+#sound-panel .row { display: grid; grid-template-columns: 28px 46px 90px; align-items: center; gap: 6px; }
+#sound-panel button {
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; font-size: 14px; line-height: 1;
+  background: rgba(255, 243, 230, 0.15); color: #fff3e6; cursor: pointer;
+}
+#restart-btn { padding: 7px 14px; border: 0; border-radius: 999px; background: rgba(255, 243, 230, 0.15); color: #fff3e6; font: 600 12px/1 system-ui, sans-serif; cursor: pointer; }
+#restart-btn:hover { background: rgba(255, 243, 230, 0.3); }
+#sound-panel button:hover { background: rgba(255, 243, 230, 0.3); }
+#sound-panel input[type=range] { width: 100%; accent-color: #d9503f; cursor: pointer; }
+#sound-panel .row.off { opacity: 0.55; }
+#camera {
+  position: fixed; right: 20px; bottom: 20px; width: min(240px, 34vw); aspect-ratio: 4 / 3;
+  border-radius: 12px; overflow: hidden; background: #000;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+#camera.on { opacity: 1; }
+
+/* the cards in the middle of the screen: "time to mix" (camera or mouse?) and "all cookies cut" */
+.overlay {
+  position: fixed; inset: 0; display: grid; place-items: center;
+  background: rgba(8, 5, 3, 0.55); backdrop-filter: blur(3px);
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.overlay.show { opacity: 1; pointer-events: auto; }
+.overlay .card {
+  width: min(420px, calc(100vw - 32px)); box-sizing: border-box; padding: 28px 28px 22px;
+  max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto;
+  border-radius: 20px; background: #2a1a12; color: #ffe8c8; text-align: center;
+  font: 400 15px/1.45 system-ui, sans-serif; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  transform: translateY(12px) scale(0.97); transition: transform 0.3s;
+}
+.overlay.show .card { transform: none; }
+.overlay h2 { margin: 10px 0 6px; font-size: 22px; color: #fff3e6; }
+.overlay p { margin: 0 0 10px; }
+#mix-intro .privacy { font-size: 13px; color: #d9bfa0; }
+.overlay .buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.overlay button {
+  padding: 12px 18px; border-radius: 999px; border: 0; cursor: pointer;
+  font: 600 15px/1.2 system-ui, sans-serif;
+}
+.overlay button:disabled { opacity: 0.6; cursor: default; }
+#use-camera, #cookies-done-ok { background: #b3202a; color: #fff3e6; }
+#use-mouse { background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
+#mix-intro .note { min-height: 1.4em; margin: 12px 0 0; font-size: 13px; color: #ffd27a; }
+
+/* the welcome card, at the very start of a new game */
+#welcome .card { text-align: left; width: min(520px, calc(100vw - 32px)); }
+#welcome h2 { text-align: center; font-size: 25px; margin-top: 4px; }
+#welcome .lead { text-align: center; font-size: 16px; color: #fff3e6; }
+#welcome .steps { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin: 12px 0 14px; padding: 0; counter-reset: step; }
+#welcome .steps li {
+  counter-increment: step; display: flex; align-items: center; gap: 5px; padding: 4px 9px 4px 5px;
+  border-radius: 999px; background: rgba(255, 232, 200, 0.1); font-size: 12.5px; font-weight: 600; color: #fff3e6;
+}
+#welcome .steps li::before {
+  content: counter(step); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  background: #b3202a; font-size: 11px;
+}
+#welcome ul.tips { margin: 0 0 4px; padding: 0 0 0 18px; font-size: 14px; color: #ffe8c8; }
+#welcome ul.tips li { margin: 0 0 6px; }
+#welcome ul.tips li::marker { color: #ffb35c; }
+#welcome-start { background: #b3202a; color: #fff3e6; }
+
+/* how many cookies are cut out: a slot for each, filled in as they're cut */
+#cookie-counter {
+  position: fixed; left: 50%; top: 20px; transform: translate(-50%, -8px);
+  display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 999px;
+  background: rgba(20, 12, 8, 0.75); color: #ffe8c8; font: 500 14px/1.2 system-ui, sans-serif;
+  pointer-events: none; opacity: 0; transition: opacity 0.3s, transform 0.3s;
+}
+#cookie-counter.show { opacity: 1; transform: translate(-50%, 0); }
+#cookie-counter .slots { display: flex; gap: 4px; flex: none; }
+#cookie-counter { white-space: nowrap; }
+#cookie-counter .slot {
+  display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.35); font-size: 15px;
+}
+#cookie-counter .slot.filled { box-shadow: none; background: #e0a455; animation: pop 0.35s; }
+#cookie-counter .slot.filled.drawn { background: #c77a32; }
+#cookie-counter b { color: #fff3e6; font-variant-numeric: tabular-nums; }
+@keyframes pop { 0% { transform: scale(0.3); } 70% { transform: scale(1.25); } 100% { transform: none; } }
+
+/* the "perfectly baked" confirmation, when the cookies come out just right */
+#baked-toast {
+  position: fixed; left: 50%; top: 76px; z-index: 5; transform: translate(-50%, -14px); /* (under the top bar's status) */
+  max-width: calc(100vw - 32px); box-sizing: border-box; padding: 12px 24px; border-radius: 18px; text-align: center;
+  display: flex; flex-direction: column; gap: 2px; background: rgba(36, 104, 52, 0.95); color: #f1ffe9;
+  font: 500 14px/1.3 system-ui, sans-serif; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  pointer-events: none; opacity: 0; transition: opacity 0.35s, transform 0.35s;
+}
+#baked-toast b { font-size: 20px; color: #ffffff; }
+#baked-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* the oven clock while the cookies bake */
+#oven-timer {
+  position: fixed; left: 50%; top: 20px; transform: translate(-50%, -8px);
+  display: flex; align-items: baseline; gap: 10px; padding: 8px 18px; border-radius: 999px;
+  background: rgba(20, 12, 8, 0.8); color: #ffe8c8; font: 500 14px/1.2 system-ui, sans-serif;
+  pointer-events: none; opacity: 0; transition: opacity 0.3s, transform 0.3s, background 0.6s;
+}
+#oven-timer.show { opacity: 1; transform: translate(-50%, 0); }
+#oven-timer b { font-size: 22px; color: #ffb35c; font-variant-numeric: tabular-nums; }
+#oven-timer.late { background: rgba(80, 20, 10, 0.85); }
+#oven-timer.alarm { background: rgba(150, 20, 20, 0.92); animation: alarm 0.55s steps(2) infinite; }
+#oven-timer b { transition: filter 0.3s; }
+@keyframes alarm { 50% { background: rgba(60, 10, 10, 0.92); } }
+.overlay .seconds { font-size: 13px; color: #d9bfa0; }
+#bake-again { background: #b3202a; color: #fff3e6; }
+#bake-over { background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
+
+/* decorating: the tools on the side (at the bottom on a small screen) */
+#bake-decorate { background: #b3202a; color: #fff3e6; }
+#decorated-keep { background: #b3202a; color: #fff3e6; }
+#decorate {
+  position: fixed; left: 16px; top: 50%; width: 208px; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 18px;
+  max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto;
+  background: rgba(20, 12, 8, 0.88); color: #ffe8c8; font: 500 13px/1.3 system-ui, sans-serif;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  opacity: 0; pointer-events: none; transform: translate(-12px, -50%); transition: opacity 0.3s, transform 0.3s;
+}
+#decorate.show { opacity: 1; pointer-events: auto; transform: translate(0, -50%); }
+#decorate h3 { margin: 0; font-size: 15px; color: #fff3e6; }
+#decorate .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#decorate .tools button {
+  display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 4px 8px;
+  border: 0; border-radius: 12px; cursor: pointer; color: inherit; font: inherit; text-align: center;
+  background: rgba(255, 232, 200, 0.08); box-shadow: inset 0 0 0 1.5px transparent;
+}
+#decorate .tools button:hover { background: rgba(255, 232, 200, 0.16); }
+#decorate .tools button.on { background: rgba(255, 179, 92, 0.2); box-shadow: inset 0 0 0 1.5px #ffb35c; }
+#decorate .tools .sw { width: 26px; height: 18px; display: block; position: relative; }
+#decorate .sw.icing { border-radius: 50% 50% 45% 55%; background: #f7b7cf; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.12); }
+#decorate .sw.chips::before, #decorate .sw.chips::after {
+  content: ''; position: absolute; width: 8px; height: 6px; border-radius: 40%; background: #4a2818;
+}
+#decorate .sw.chips::before { left: 2px; top: 6px; transform: rotate(-20deg); }
+#decorate .sw.chips::after { left: 14px; top: 2px; transform: rotate(25deg); }
+#decorate .sw.sprinkles {
+  background:
+    linear-gradient(35deg, transparent 40%, #ff4d6d 40% 60%, transparent 60%) 0 0 / 9px 9px,
+    linear-gradient(-30deg, transparent 40%, #4cc9f0 40% 60%, transparent 60%) 4px 5px / 11px 11px,
+    linear-gradient(80deg, transparent 40%, #ffd23f 40% 60%, transparent 60%) 2px 2px / 13px 10px;
+}
+#decorate .sw.wipe { border-radius: 4px; background: linear-gradient(135deg, #f1d9c3 50%, #c98b8b 50%); }
+#decorate .icing-opts { display: none; flex-direction: column; gap: 10px; }
+#decorate .zoom { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #d9bfa0; }
+#decorate .zoom span { flex: 1; text-align: center; }
+#decorate .zoom button {
+  min-width: 30px; height: 30px; padding: 0 8px; border: 0; border-radius: 999px; cursor: pointer;
+  background: rgba(255, 232, 200, 0.12); color: #fff3e6; font: 600 15px/1 system-ui, sans-serif;
+}
+#decorate .zoom button:hover { background: rgba(255, 232, 200, 0.22); }
+#decorate .zoom #zoom-fit { font-size: 11px; }
+#decorate .note { margin: 0; font-size: 11.5px; line-height: 1.35; color: #c9ad8d; }
+#decorate.icing-on .icing-opts { display: flex; }
+#decorate #wheel { width: 100%; max-width: 176px; aspect-ratio: 1; align-self: center; border-radius: 50%; cursor: crosshair; touch-action: none; }
+#decorate #wheel:focus-visible, #decorate button:focus-visible, #decorate input:focus-visible { outline: 2px solid #ffb35c; outline-offset: 2px; }
+#decorate .current { display: flex; align-items: center; gap: 8px; }
+#decorate #color-preview { width: 22px; height: 22px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255, 243, 230, 0.8); }
+#decorate #color-hex { font-variant-numeric: tabular-nums; text-transform: uppercase; color: #fff3e6; }
+#decorate label { display: grid; gap: 4px; font-size: 12px; color: #d9bfa0; }
+#decorate input[type=range] { width: 100%; margin: 0; accent-color: #ffb35c; }
+#decorate #shade {
+  -webkit-appearance: none; appearance: none; height: 14px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--shade-from, #000), var(--shade-to, #fff));
+}
+#decorate #shade::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff3e6; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45); }
+#decorate #shade::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: #fff3e6; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45); }
+#decorate #swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+#decorate #swatches button { width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 1.5px rgba(255, 232, 200, 0.35); }
+#decorate #swatches button.on { box-shadow: 0 0 0 2px #2a1a12, 0 0 0 4px #fff3e6; }
+#decorate #decorate-done { padding: 10px 14px; border: 0; border-radius: 999px; cursor: pointer; background: #b3202a; color: #fff3e6; font: 600 14px/1.2 system-ui, sans-serif; }
+body.decorating { cursor: crosshair; }
+body.decorating #bottom-stack { bottom: calc(var(--dock, 0px) + 28px); }
+@media (max-width: 900px) { #decorate { width: 176px; left: 10px; } }
+@media (max-width: 760px) {
+  #decorate {
+    left: 8px; right: 8px; top: auto; bottom: 8px; width: auto; max-height: 48vh; max-height: 48dvh;
+    flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 10px 14px; padding: 10px;
+    transform: translateY(12px);
+  }
+  #decorate.show { transform: none; }
+  #decorate h3, #decorate .note { display: none; }
+  #decorate .zoom { flex: 1 1 100%; }
+  #decorate .tools { flex: 1 1 100%; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  #decorate .tools .sw { display: none; }
+  #decorate .tools button { padding: 8px 2px; font-size: 12px; }
+  #decorate .icing-opts { flex: 1 1 100%; flex-direction: row; flex-wrap: nowrap; gap: 8px 12px; align-items: center; }
+  #decorate #wheel { max-width: 104px; align-self: flex-start; }
+  #decorate .icing-opts .controls { flex: 1 1 110px; display: flex; flex-direction: column; gap: 8px; }
+  #decorate #decorate-done { flex: 1 1 100%; }
+  body.decorating #bottom-stack { bottom: calc(var(--dock, 0px) + 16px); }
+}
+
+/* the Christmas card to share (see src/decorating/share.js) */
+#decorated-share, #card-share { background: #b3202a; color: #fff3e6; }
+.overlay button.link { background: none; padding: 6px; color: #d9bfa0; font-weight: 500; font-size: 13px; text-decoration: underline; }
+#decorated-note { font-size: 13px; color: #ffd27a; min-height: 0; margin: 10px 0 0; }
+#decorated-note:empty { display: none; }
+.overlay .card.share-card { width: min(860px, calc(100vw - 32px)); padding: 22px 26px 20px; text-align: left; }
+.share-card h2 { text-align: center; margin-top: 0; }
+.share-body { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.card-preview { position: relative; perspective: 1400px; }
+#card-flip {
+  position: relative; display: block; width: 100%; aspect-ratio: 4 / 5; padding: 0; border: 0; border-radius: 10px;
+  background: none; cursor: pointer; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(.2, .7, .2, 1);
+}
+#card-flip.turned { transform: rotateY(180deg); }
+#card-flip img {
+  position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 10px; backface-visibility: hidden;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5); background: #6e0f17;
+}
+#card-flip #card-back { transform: rotateY(180deg); background: #fbf3e4; }
+#card-flip:focus-visible { outline: 2px solid #ffb35c; outline-offset: 4px; }
+.snapping-note { display: none; position: absolute; inset: 0; z-index: 1; place-items: center; text-align: center; color: #ffe8c8; font-size: 14px; }
+#share.snapping .snapping-note { display: grid; }
+#share.snapping #card-flip { visibility: hidden; }
+.share-side { display: flex; flex-direction: column; gap: 10px; }
+.share-side label { font-size: 14px; color: #fff3e6; font-weight: 600; }
+#card-message {
+  width: 100%; box-sizing: border-box; resize: none; padding: 10px 12px; border-radius: 12px; border: 0;
+  background: #fbf3e4; color: #5a2a16; font: 600 22px/1.25 "Caveat", "Segoe Print", cursive;
+}
+#card-message:focus-visible { outline: 2px solid #ffb35c; outline-offset: 2px; }
+.count-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #d9bfa0; font-variant-numeric: tabular-nums; margin-top: -4px; }
+/* "Share your card": a drop-down list of where to send it */
+.share-drop { position: relative; }
+#card-share::after { content: "▾"; margin-left: 8px; display: inline-block; transition: transform 0.15s; }
+#card-share[aria-expanded="true"]::after { transform: rotate(180deg); }
+.share-sites {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 5; display: flex; flex-direction: column;
+  padding: 6px; border-radius: 14px; background: #2a1a12; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 232, 200, 0.2);
+}
+.share-sites[hidden], .share-sites button[hidden] { display: none; }
+.share-sites button {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-radius: 9px;
+  background: transparent; color: #ffe8c8; font: 500 15px/1.2 system-ui, sans-serif; text-align: left; cursor: pointer; box-shadow: none;
+}
+.share-sites button:hover, .share-sites button:focus-visible { background: rgba(255, 232, 200, 0.14); outline: none; }
+.share-sites button::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; background: #d9bfa0; }
+.share-sites [data-site="facebook"]::before { background: #1877f2; }
+.share-sites [data-site="instagram"]::before { background: linear-gradient(45deg, #f09433, #dc2743 55%, #bc1888); }
+.menu-label { padding: 8px 12px 2px; font: 700 11px/1 system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #d9bfa0; }
+.share-more { display: flex; gap: 8px; }
+.share-more button { flex: 1; background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
+.share-more button[hidden] { display: none; }
+.share-end { display: flex; gap: 8px; margin-top: 4px; }
+.share-end button { flex: 1; }
+#share-close { background: #ffe8c8; color: #3a1d10; }
+#share-restart { background: transparent; color: #ffe8c8; box-shadow: inset 0 0 0 1.5px rgba(255, 232, 200, 0.4); }
+.share-hint { font-size: 12.5px; color: #d9bfa0; margin: 0; }
+#share-status { font-size: 13px; color: #ffd27a; margin: 0; min-height: 1.2em; }
+@media (max-width: 680px) {
+  .share-body { grid-template-columns: 1fr; gap: 14px; }
+  .card-preview { width: min(300px, 70vw); margin: 0 auto; }
+  .overlay .card.share-card { padding: 18px 16px 14px; }
+}
+
+/* while the cookies are carried to the oven, the mouse is a 3D hand in the room (see
+   baking/hand.js), so the normal pointer is hidden while it's showing */
+body.hand-mode { cursor: none !important; }
+
+/* which keys walk around the room */
+#walk-keys {
+  position: fixed; left: 20px; bottom: 20px; padding: 10px 14px; border-radius: 14px;
+  background: rgba(20, 12, 8, 0.8); color: #ffe8c8; font: 500 12px/1.3 system-ui, sans-serif;
+  pointer-events: none; opacity: 0; transform: translateY(8px); transition: opacity 0.3s, transform 0.3s;
+}
+#walk-keys.show { opacity: 1; transform: none; }
+#walk-keys .pad { display: grid; grid-template-columns: repeat(3, 34px); gap: 4px; justify-content: center; }
+#walk-keys kbd {
+  display: grid; place-items: center; height: 30px; border-radius: 7px; font: 600 12px/1 system-ui, sans-serif;
+  background: #3a261a; color: #ffe8c8; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 232, 200, 0.25);
+  transition: background 0.1s, color 0.1s, transform 0.1s;
+}
+#walk-keys kbd small { font-size: 9px; opacity: 0.7; }
+#walk-keys kbd.down { background: #e0a455; color: #2a1a12; transform: translateY(2px); }
+#walk-keys .up { grid-column: 2; }
+#walk-keys p { margin: 8px 0 0; text-align: center; color: #d9bfa0; }
+
+/* the little tutorial: an icon showing the movement (round a circle, up and down, round a star) */
+#tutorial {
+  transform: translateY(8px);
+  width: max-content; max-width: min(560px, 100%); box-sizing: border-box;
+  display: flex; align-items: center; gap: 14px; padding: 10px 18px 10px 10px;
+  border-radius: 18px; background: rgba(20, 12, 8, 0.82); color: #ffe8c8;
+  font: 500 14px/1.35 system-ui, sans-serif; pointer-events: none;
+  opacity: 0; transition: opacity 0.4s, transform 0.4s;
+}
+#tutorial.show { opacity: 1; transform: none; }
+#tutorial.notice svg { display: none; }
+#tutorial.notice { padding: 14px 22px; font-size: 16px; }
+#tutorial svg { width: 64px; height: 64px; flex: none; }
+#tutorial .track { fill: none; stroke: rgba(255, 232, 200, 0.35); stroke-width: 3; stroke-dasharray: 5 6; }
+#tutorial .arrow { fill: rgba(255, 232, 200, 0.6); }
+#tutorial b { color: #fff3e6; }
+#tutorial small { display: block; color: #d9bfa0; font-size: 12px; }
+#camera video, #camera canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  transform: scaleX(-1); /* like a mirror */
+}
+
+/* smaller windows, which is also what zooming the page in makes: the top panels move onto
+   their own rows, the keys guide shrinks, and the bottom panels move up out of its way */
+@media (max-width: 900px) {
+}
+@media (max-width: 960px) {
+  /* the keys guide goes to the right edge, small, so the bottom stays clear */
+  #walk-keys { left: auto; right: 12px; bottom: auto; top: 112px; padding: 6px 8px; border-radius: 10px; }
+  #walk-keys .pad { grid-template-columns: repeat(3, 28px); gap: 3px; }
+  #walk-keys kbd { height: 24px; }
+  #walk-keys p { display: none; }
+}
+@media (max-width: 1100px) {
+  /* the camera picture goes under the top buttons instead of the bottom corner */
+  #camera { top: 112px; bottom: auto; right: 12px; width: min(200px, 30vw); }
+}
+@media (max-width: 760px) {
+  #bottom-stack { bottom: 12px; }
+  #tutorial { gap: 10px; padding: 8px 12px 8px 8px; }
+  #tutorial svg { width: 48px; height: 48px; }
+}
+@media (max-width: 480px) {
+  #status, #hint, #tutorial, #cookie-counter, #oven-timer { font-size: 12px; }
+  #cookie-counter { gap: 8px; padding: 6px 12px; }
+  #cookie-counter .slots { gap: 3px; }
+  #cookie-counter .slot { width: 17px; height: 17px; }
+  #tutorial small { font-size: 11px; }
+  .overlay .card { padding: 20px 18px 16px; }
+  .overlay h2 { font-size: 19px; }
+}
+@media (max-height: 520px) {
+  #tutorial small { display: none; }
+  #tutorial svg { width: 40px; height: 40px; }
+}

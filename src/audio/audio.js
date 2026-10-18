@@ -270,7 +270,7 @@ function apply() {
 		if ( ! row ) continue;
 		const { on, volume } = settings[ bus ];
 		const button = row.querySelector( 'button' );
-		button.textContent = ! on ? '🔇' : volume === 0 ? '🔈' : bus === 'music' ? '🎵' : '🔊';
+		button.textContent = bus === 'music' ? ( on && volume > 0 ? '🎶' : '🔕' ) : ! on ? '🔇' : volume === 0 ? '🔈' : '🔊';
 		button.setAttribute( 'aria-pressed', String( on ) );
 		button.title = `${ bus === 'music' ? 'Music' : 'Sounds' } ${ on ? 'on' : 'off' }`;
 		row.querySelector( 'input' ).value = String( Math.round( volume * 100 ) );

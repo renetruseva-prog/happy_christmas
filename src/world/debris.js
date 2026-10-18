@@ -2,7 +2,7 @@
 // bounce and settle as flat splodges and shards, and are wiped away a while later.
 import * as THREE from 'three/webgpu';
 import { addBall } from './physics.js';
-import { TABLE_TOP } from './table.js';
+import { TABLE_TOP } from '../core/table.js';
 
 const MAX = 120;
 const LIFE = 1; // seconds a piece stays on the table once it has settled

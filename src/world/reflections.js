@@ -4,7 +4,7 @@
 // one reflects depends on what it is: wet egg white and glass a lot, glazed bowls, butter and
 // chocolate some, paper and flour hardly at all.
 import * as THREE from 'three/webgpu';
-import { materials as bowlMaterials } from './bowl/materials.js';
+import { materials as bowlMaterials } from '../bowl/materials.js';
 
 const SIZE = 256; // each side of the picture (it's blurred for the rougher things anyway)
 const FROM = new THREE.Vector3( 0, 1.05, - 0.1 ); // where it's taken from: over the middle of the table

@@ -4,12 +4,12 @@
 //   and if you chose your hand before, the camera comes back on by itself
 // - Esc puts the tool down
 // - the view is locked, so dragging works the tool instead of turning the view (or with freeView:
-//   only the left button is the tool's: the wheel still zooms and the right button still moves the view)
+//   dragging over the work uses the tool, dragging anywhere else turns the view)
 // - the little tutorial: shown when you start, hidden once you're getting on with it,
 //   and back if you stop for a few seconds
 import * as THREE from 'three/webgpu';
-import { getState, setState } from './state.js';
-import { showGuide, hideGuide, guideShown } from './ui.js';
+import { getState, setState } from '../core/state.js';
+import { showGuide, hideGuide, guideShown } from '../ui.js';
 import { startHandTracking, stopHandTracking, updateHandTracking, isTracking, handPosition } from './handTracking.js';
 
 const cameraButton = document.getElementById( 'camera-btn' );
@@ -21,13 +21,15 @@ export class HeldTool {
 	// hints: what the hover hint says while holding it: { handMoving, handMissing, mouseOn, mouseOff }
 	// progress(): how far the job is (0..1), so the tutorial knows when you're getting on with it
 	// onEscape(): put it down
-	// freeView: the view can still be moved while holding it, just not with the left button
-	constructor( { camera, controls, canvas, verb, guide, hints, progress, onEscape, freeView = false } ) {
+	// freeView: the view can still be turned while holding it. The left button then works the tool
+	// only when it's pressed over the work (workArea( raycaster ) says where); anywhere else it turns
+	// the view, like in the other scenes
+	constructor( { camera, controls, canvas, verb, guide, hints, progress, onEscape, freeView = false, workArea = null } ) {
 
 		this.camera = camera;
 		this.controls = controls;
 		this.freeView = freeView;
-		this.leftButton = null; // what the left button did before the tool took it
+		this.workArea = workArea;
 		this.verb = verb;
 		this.guide = guide;
 		this.hints = hints;
@@ -45,7 +47,22 @@ export class HeldTool {
 			this.pointer.set( ( e.clientX / window.innerWidth ) * 2 - 1, - ( e.clientY / window.innerHeight ) * 2 + 1 );
 
 		} );
-		canvas.addEventListener( 'pointerdown', ( e ) => { if ( this.holding && e.button === 0 ) this.mouseDown = true; } );
+		canvas.addEventListener( 'pointerdown', ( e ) => {
+
+			if ( ! this.holding || e.button !== 0 ) return;
+			if ( this.freeView && this.workArea ) {
+
+				// (before the view's controls get the press: over the work it's the tool's, elsewhere it turns the view)
+				this.pointer.set( ( e.clientX / window.innerWidth ) * 2 - 1, - ( e.clientY / window.innerHeight ) * 2 + 1 );
+				this.raycaster.setFromCamera( this.pointer, this.camera );
+				if ( ! this.workArea( this.raycaster ) ) return;
+				e.stopImmediatePropagation();
+
+			}
+
+			this.mouseDown = true;
+
+		}, true );
 		window.addEventListener( 'pointerup', () => { this.mouseDown = false; } );
 		window.addEventListener( 'blur', () => { this.mouseDown = false; } );
 		window.addEventListener( 'keydown', ( e ) => {
@@ -53,6 +70,7 @@ export class HeldTool {
 			if ( ! this.holding ) return;
 			if ( e.key === 'Escape' ) onEscape();
 			if ( e.key === 'c' || e.key === 'C' ) this.toggleCamera();
+			if ( this.freeView ) this.turnWithKey( e );
 
 		} );
 		cameraButton.addEventListener( 'click', () => this.toggleCamera() );
@@ -70,8 +88,24 @@ export class HeldTool {
 
 		}
 
-		if ( this.leftButton === null ) this.leftButton = this.controls.mouseButtons.LEFT;
-		this.controls.mouseButtons.LEFT = null;
+		this.controls.enabled = true;
+
+	}
+
+	// the arrow keys also turn the view around what it looks at (hold one down)
+	turnWithKey( e ) {
+
+		const turn = { ArrowLeft: [ - 1, 0 ], ArrowRight: [ 1, 0 ], ArrowUp: [ 0, - 1 ], ArrowDown: [ 0, 1 ] }[ e.key ];
+		if ( ! turn ) return;
+		e.preventDefault();
+
+		const { camera, controls } = this;
+		const offset = camera.position.clone().sub( controls.target );
+		const spherical = new THREE.Spherical().setFromVector3( offset );
+		spherical.theta += turn[ 0 ] * 0.06;
+		spherical.phi = THREE.MathUtils.clamp( spherical.phi + turn[ 1 ] * 0.04, 0.2, Math.PI / 2 - 0.05 );
+		camera.position.copy( controls.target ).add( offset.setFromSpherical( spherical ) );
+		controls.update();
 
 	}
 
@@ -98,13 +132,6 @@ export class HeldTool {
 	}
 
 	unlockView() {
-
-		if ( this.leftButton !== null ) {
-
-			this.controls.mouseButtons.LEFT = this.leftButton;
-			this.leftButton = null;
-
-		}
 
 		this.controls.enabled = true;
 

@@ -6,7 +6,7 @@
 import * as THREE from 'three/webgpu';
 import { and, positionLocal, positionWorld } from 'three/tsl';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { animate, ease } from '../sequence.js';
+import { animate, ease } from '../core/sequence.js';
 
 const OPEN_ANGLE = 1.45; // how far the door swings down (radians)
 const HEAT = 2.5; // how much brighter the glow gets while baking

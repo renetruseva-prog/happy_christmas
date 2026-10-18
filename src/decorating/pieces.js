@@ -5,7 +5,7 @@
 // They look like the ones in the bowls on the table: the chips are the model's own chips, the
 // sprinkles have the colours of the model's sprinkles.
 import * as THREE from 'three/webgpu';
-import { addReflection } from '../reflections.js';
+import { addReflection } from '../world/reflections.js';
 
 const GRAVITY = 9.81;
 const AIR = 0.6; // how much the air slows them

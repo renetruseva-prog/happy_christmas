@@ -2,7 +2,7 @@
 // the middle of the bowl over the last 2 seconds: going round adds up, while going back and forth
 // or just holding a hand up cancels out to (almost) nothing.
 import * as THREE from 'three/webgpu';
-import { MIX_DISTANCE, MIN_SWIRL } from '../config.js';
+import { MIX_DISTANCE, MIN_SWIRL } from '../core/config.js';
 
 const WINDOW = 2; // seconds
 

@@ -3,10 +3,10 @@
 // bounce off the bowl and the table and stay there as splodges, until there are too many and the
 // oldest are wiped away.
 import * as THREE from 'three/webgpu';
-import { addBall } from '../physics.js';
-import { TABLE_TOP } from '../table.js';
+import { addBall } from '../world/physics.js';
+import { TABLE_TOP } from '../core/table.js';
 import { bowlInfo, contentsTop } from '../bowl/index.js';
-import { getState } from '../state.js';
+import { getState } from '../core/state.js';
 
 const MAX_FLYING = 40;
 const MAX_STUCK = 40;

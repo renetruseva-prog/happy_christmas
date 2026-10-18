@@ -144,3 +144,82 @@ export function apart( a, b, gap ) {
 	return da.every( ( p ) => db.every( ( q ) => Math.hypot( p.x - q.x, p.z - q.z ) >= gap ) );
 
 }
+
+// where two segments cross (null if they don't)
+function crossingPoint( a, b, c, d ) {
+
+	if ( ! crosses( a, b, c, d ) ) return null;
+	const t = ( ( c.x - a.x ) * ( d.z - c.z ) - ( c.z - a.z ) * ( d.x - c.x ) ) / ( ( b.x - a.x ) * ( d.z - c.z ) - ( b.z - a.z ) * ( d.x - c.x ) );
+	return { x: a.x + ( b.x - a.x ) * t, z: a.z + ( b.z - a.z ) * t };
+
+}
+
+// a sketch that crosses itself (the end overshooting the start, a little loop...) made into one
+// that doesn't: at each crossing, the bigger of the two loops it makes is kept
+export function untangle( poly ) {
+
+	for ( let round = 0; round < 30; round ++ ) {
+
+		const n = poly.length;
+		let found = null;
+		for ( let i = 0; i < n && ! found; i ++ ) {
+
+			for ( let j = i + 2; j < n; j ++ ) {
+
+				if ( i === 0 && j === n - 1 ) continue;
+				const p = crossingPoint( poly[ i ], poly[ ( i + 1 ) % n ], poly[ j ], poly[ ( j + 1 ) % n ] );
+				if ( p ) {
+
+					found = { i, j, p };
+					break;
+
+				}
+
+			}
+
+		}
+
+		if ( ! found ) return poly;
+		const { i, j, p } = found;
+		const inner = [ p, ...poly.slice( i + 1, j + 1 ) ];
+		const outer = [ ...poly.slice( 0, i + 1 ), p, ...poly.slice( j + 1 ) ];
+		poly = area( inner ) >= area( outer ) ? inner : outer;
+		if ( poly.length < 3 ) return null;
+
+	}
+
+	return convexHull( poly ); // (a tangle that won't come undone: its outer edge)
+
+}
+
+// the shape's outer edge, without any dents
+export function convexHull( poly ) {
+
+	const pts = [ ...poly ].sort( ( a, b ) => a.x - b.x || a.z - b.z );
+	const turn = ( o, a, b ) => ( a.x - o.x ) * ( b.z - o.z ) - ( a.z - o.z ) * ( b.x - o.x );
+	const build = ( list ) => {
+
+		const hull = [];
+		for ( const p of list ) {
+
+			while ( hull.length >= 2 && turn( hull[ hull.length - 2 ], hull[ hull.length - 1 ], p ) <= 0 ) hull.pop();
+			hull.push( p );
+
+		}
+
+		hull.pop();
+		return hull;
+
+	};
+
+	return [ ...build( pts ), ...build( pts.reverse() ) ];
+
+}
+
+// the outline scaled about its middle
+export function scaled( poly, factor ) {
+
+	const { c } = bounds( poly );
+	return poly.map( ( p ) => ( { x: c.x + ( p.x - c.x ) * factor, z: c.z + ( p.z - c.z ) * factor } ) );
+
+}

@@ -1,6 +1,6 @@
 // where the game's sounds go off: this watches the state and plays what fits (see audio.js).
 // The mixer's motor is switched from the mixer's own frame loop.
-import { subscribe } from './state.js';
+import { subscribe } from '../core/state.js';
 import { initAudio, play } from './audio.js';
 
 initAudio();

@@ -1,6 +1,6 @@
 // entry point: builds the stage, loads the kitchen and runs the frame loop
-import { renderer, scene, camera, controls, constrainCamera, adaptResolution, render, warmUp } from './src/stage.js';
-import { loadKitchen } from './src/kitchen.js';
+import { renderer, scene, camera, controls, constrainCamera, adaptResolution, render, warmUp } from './src/core/stage.js';
+import { loadKitchen } from './src/world/kitchen.js';
 import { initIngredients } from './src/ingredients.js';
 import { initBowl, updateBowl } from './src/bowl/index.js';
 import { initMixer, updateMixer } from './src/mixer/index.js';
@@ -8,16 +8,16 @@ import { initRolling, updateRolling } from './src/rolling/index.js';
 import { initCutting, updateCutting } from './src/cutting/index.js';
 import { initBaking, updateBaking } from './src/baking/index.js';
 import { initDecorating, updateDecorating } from './src/decorating/index.js';
-import { addChristmas, updateChristmas } from './src/christmas.js';
-import { initInteraction, updateInteraction } from './src/interaction.js';
-import { trackProgress } from './src/progress.js';
-import { updateLights } from './src/lights.js';
-import { updateTweens } from './src/tween.js';
-import { updateSequences } from './src/sequence.js';
-import { initReflections, updateReflections } from './src/reflections.js';
-import { initPhysics, stepPhysics } from './src/physics.js';
-import { initDebris, updateDebris } from './src/debris.js';
-import { initPendant, updatePendant } from './src/pendant.js';
+import { addChristmas, updateChristmas } from './src/world/christmas.js';
+import { initInteraction, updateInteraction } from './src/input/interaction.js';
+import { trackProgress } from './src/core/progress.js';
+import { updateLights } from './src/world/lights.js';
+import { updateTweens } from './src/core/tween.js';
+import { updateSequences } from './src/core/sequence.js';
+import { initReflections, updateReflections } from './src/world/reflections.js';
+import { initPhysics, stepPhysics } from './src/world/physics.js';
+import { initDebris, updateDebris } from './src/world/debris.js';
+import { initPendant, updatePendant } from './src/world/pendant.js';
 import './src/ui.js';
 
 const world = await loadKitchen( scene, camera, controls );

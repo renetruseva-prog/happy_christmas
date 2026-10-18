@@ -6,14 +6,14 @@
 //   dough.js  the dough and the flour    pin.js  the rolling pin
 //   placement.js  where the bowl and the dough go on the table
 import * as THREE from 'three/webgpu';
-import { ROLL_DISTANCE } from '../config.js';
-import { getState, setState } from '../state.js';
+import { ROLL_DISTANCE } from '../core/config.js';
+import { getState, setState } from '../core/state.js';
 import { showStatus } from '../ui.js';
-import { runSequence, ease } from '../sequence.js';
-import { loadDoughProgress } from '../progress.js';
-import { TABLE_TOP } from '../table.js';
+import { runSequence, ease } from '../core/sequence.js';
+import { loadDoughProgress } from '../core/progress.js';
+import { TABLE_TOP } from '../core/table.js';
 import { bowlInfo, emptyBowl } from '../bowl/index.js';
-import { HeldTool } from '../heldTool.js';
+import { HeldTool } from '../input/heldTool.js';
 import { makeDough, makeFlour, flourAmount, thickness, shapeDough, doughReach } from './dough.js';
 import { findPin, placePin } from './pin.js';
 import { findBowlSpot, findDoughSpot, SHEET_ROOM } from './placement.js';

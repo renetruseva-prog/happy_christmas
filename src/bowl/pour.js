@@ -2,7 +2,7 @@
 // opening and a heap grows in the bowl, then it's put back. The sugar jar's lid comes off first,
 // and the sugar level in the jar goes down as it pours.
 import * as THREE from 'three/webgpu';
-import { animate, arcLerp, ease } from '../sequence.js';
+import { animate, arcLerp, ease } from '../core/sequence.js';
 import { ctx, bowl, surfaceY, Layer } from './contents.js';
 import { materials } from './materials.js';
 import { particles, spawnPuff, GRAVITY } from './particles.js';

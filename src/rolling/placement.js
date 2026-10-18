@@ -1,7 +1,7 @@
 // where things go on the table for rolling: the empty bowl is slid to the back, out of the way,
 // and the dough goes where it and the rolling pin lying across it have room
 import * as THREE from 'three/webgpu';
-import { TABLE_TOP, thingsOnTable, clearance, distanceToSegment } from '../table.js';
+import { TABLE_TOP, thingsOnTable, clearance, distanceToSegment } from '../core/table.js';
 
 const DOUGH_X = [ - 0.6, 0.6 ]; // where on the table the dough can go (with room for the rolled-out sheet)
 const DOUGH_Z = [ - 0.42, 0.12 ];
