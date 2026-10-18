@@ -4,10 +4,20 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { LIGHT_SCALE, BAKE_BOOST, PENDANT_LIGHT, PENDANT_BULB_GLOW } from '../core/config.js';
 import { trackLight, trackBulb } from './lights.js';
 import { paperSack } from './paperSack.js';
+import { setLoading } from '../core/loading.js';
+
+const KITCHEN_BYTES = 4000000; // about how big kitchen.glb is, for the loading bar when the server doesn't say
 
 export async function loadKitchen( scene, camera, controls ) {
 
-	const gltf = await new GLTFLoader().loadAsync( `${ import.meta.env.BASE_URL }models/kitchen.glb` );
+	// the download is most of the wait: the first half of the loading bar
+	const gltf = await new GLTFLoader().loadAsync( `${ import.meta.env.BASE_URL }models/kitchen.glb`, ( e ) => {
+
+		const total = e.lengthComputable && e.total > 0 ? e.total : KITCHEN_BYTES;
+		setLoading( 0.04 + 0.5 * Math.min( e.loaded / total, 1 ) );
+
+	} );
+	setLoading( 0.54 );
 	const room = gltf.scene;
 	const interactables = []; // everything marked "interactable" in Blender
 
