@@ -7,6 +7,7 @@
 // everything pauses when the tab is hidden.
 //   play( 'pop' )               one effect         loop( 'mixer', true/false, rate )   a sound that goes on
 // (the smoke alarm, baking/alarm.js, has its own beeps)
+import { isTyping } from '../core/typing.js';
 
 const EXTENSIONS = [ 'mp3', 'ogg', 'wav' ];
 const KEY = 'happy-christmas-sound';
@@ -343,7 +344,7 @@ export function initAudio() {
 	// M: everything off, or back on
 	window.addEventListener( 'keydown', ( e ) => {
 
-		if ( ( e.key !== 'm' && e.key !== 'M' ) || e.ctrlKey || e.metaKey || e.altKey ) return;
+		if ( ( e.key !== 'm' && e.key !== 'M' ) || e.ctrlKey || e.metaKey || e.altKey || isTyping( e ) ) return;
 		const on = ! ( settings.music.on || settings.sfx.on );
 		setSound( 'music', { on } );
 		setSound( 'sfx', { on } );

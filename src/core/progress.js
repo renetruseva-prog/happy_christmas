@@ -1,6 +1,7 @@
 // saves how far the player got in the browser, so a refresh doesn't reset it
 import { subscribe } from './state.js';
 import { INGREDIENTS } from './config.js';
+import { isTyping } from './typing.js';
 
 const KEY = 'happy-christmas-progress';
 
@@ -148,7 +149,7 @@ window.addEventListener( 'keydown', ( e ) => {
 
 	const cheat = CHEATS[ e.code ];
 	if ( ! cheat || ! e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.repeat ) return;
-	if ( e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement ) return;
+	if ( isTyping( e ) ) return;
 	try {
 
 		localStorage.setItem( KEY, JSON.stringify( cheat() ) );
