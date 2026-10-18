@@ -111,6 +111,14 @@ export function resetProgress() {
 
 }
 
+// starting over from the Restart button: it asks first, so one stray click can't
+// wipe what was baked
+export function askToRestart() {
+
+	if ( confirm( 'Start over? Everything you baked so far will be cleared.' ) ) resetProgress();
+
+}
+
 // testing cheats (not mentioned anywhere in the game): Shift+A jumps to cutting the cookies, with the
 // dough rolled out; Shift+B to a batch of 6 cookies cut and ready on the baking tray. Both reload
 function readyToCut() {
