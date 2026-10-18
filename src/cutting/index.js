@@ -19,7 +19,7 @@ import { loadCookies, loadCut } from '../core/progress.js';
 import { TABLE_TOP } from '../core/table.js';
 import { rolledDough } from '../rolling/index.js';
 import { SHEET_THICKNESS } from '../rolling/dough.js';
-import { starOutline, area, selfIntersects, resample, smooth, bounds } from './outline.js';
+import { starOutline, area, selfIntersects, resample, smooth, bounds, untangle, scaled } from './outline.js';
 import { initCuts, cut, cuts, whyNot, inCut, toSaved, fromSaved, onSheet, sheetLimit } from './cuts.js';
 import { Trace } from './trace.js';
 
@@ -29,7 +29,8 @@ const HOVER = 0.035; // how high a cutter in hand hangs over the dough
 const REACH_X = [ - 0.75, 0.8 ]; // where over the table it can go
 const REACH_Z = [ - 0.45, 0.35 ];
 const TURN_STEP = Math.PI / 12; // one scroll turns the cutter 15°
-const CLOSE = 0.04; // letting go this close to the start closes the shape (generous: it's hard to land on the spot)
+const CLOSE = 0.05; // letting go this close to the start closes the shape (generous: it's hard to land on the spot)
+const WENT = 0.02; // the line has to get at least this far from the start to count as a shape
 const MIN_AREA = 0.0005; // the smallest shape worth cutting (about 2 × 2 cm)
 const SMALLER = [ CUTTER_SCALE, CUTTER_SCALE * 0.85, CUTTER_SCALE * 0.7 ]; // the cutters' sizes, if the dough gets crowded
 
@@ -48,6 +49,9 @@ let drawing = false; // a shape is being drawn
 let notice = null; // a short message for the hover hint ("that doesn't fit"), and for how long
 let noticeFor = 0;
 let guided = false; // the tutorial was shown
+let wasFar = false; // the view was further from the dough than that since the tutorial came up
+let zoomedIn = false; // the view got close to the dough, so the tutorial went away
+const ZOOM_DISTANCE = 1; // how close the camera is to the dough then (metres)
 let limitShown = false; // the line round the dough is up
 
 const pointer = new THREE.Vector2( 2, 2 );
@@ -233,7 +237,7 @@ function closes() {
 
 	const { points } = trace;
 	const last = points[ points.length - 1 ];
-	return farthest() > CLOSE * 1.5 && Math.hypot( last.x - points[ 0 ].x, last.z - points[ 0 ].z ) < CLOSE;
+	return farthest() > WENT && Math.hypot( last.x - points[ 0 ].x, last.z - points[ 0 ].z ) < CLOSE;
 
 }
 
@@ -250,13 +254,14 @@ function finishDrawing() {
 
 	const { points } = trace;
 	const closed = closes();
-	const small = farthest() <= CLOSE * 1.5;
+	const small = farthest() <= WENT;
 	stopDrawing();
 	trace.clear();
 
 	if ( points.length < 3 ) return say( 'hold the mouse button and draw around a shape' );
 	if ( small ) return say( 'draw a bigger shape' );
 	if ( ! closed ) return say( 'the shape wasn\'t closed · let go back where you started' );
+	if ( ! points.every( onSheet ) ) return say( 'too close to the edge of the dough' ); // (what was drawn, before it's smoothed or scaled into place)
 
 	// the end that comes back over the start is left off, then the shaky line is evened out
 	const first = points[ 0 ];
@@ -264,11 +269,16 @@ function finishDrawing() {
 	while ( end > 3 && Math.hypot( points[ end - 1 ].x - first.x, points[ end - 1 ].z - first.z ) < 0.006 ) end --;
 	let outline = smooth( resample( points.slice( 0, end ), 0.004 ) );
 
-	// a shaky line that crosses itself gets a second, heavier smoothing before it's turned down
+	// a shaky line that crosses itself gets a heavier smoothing, then the tangle is cut out (a sketch
+	// is never turned down for that: the end overshooting the start is the most natural thing to draw)
 	if ( selfIntersects( outline ) ) outline = smooth( smooth( resample( points.slice( 0, end ), 0.01 ) ) );
-	if ( selfIntersects( outline ) ) return say( 'the outline crosses itself · try again' );
-	if ( area( outline ) < MIN_AREA ) return say( 'draw a bigger shape' );
-	if ( bounds( outline ).r > MAX_SHAPE_RADIUS ) return say( `draw a smaller shape · leave room for all ${ COOKIE_COUNT } cookies` );
+	if ( selfIntersects( outline ) ) outline = untangle( outline );
+	if ( ! outline || outline.length < 3 ) return say( 'draw a bigger shape' );
+
+	// too big or too small is put right, not turned down: it's scaled to fit
+	const reach = bounds( outline ).r;
+	if ( reach > MAX_SHAPE_RADIUS * 0.98 ) outline = scaled( outline, MAX_SHAPE_RADIUS * 0.98 / reach );
+	if ( area( outline ) < MIN_AREA ) outline = scaled( outline, Math.sqrt( MIN_AREA * 1.1 / Math.max( area( outline ), 1e-9 ) ) );
 	const why = whyNot( outline );
 	if ( why ) return say( why );
 
@@ -483,6 +493,21 @@ export function initCutting( { room: kitchen, camera: cam, controls: ctrl } ) {
 }
 
 export function updateCutting( dt ) {
+
+	// the tutorial is for getting started: once they zoom in on the dough (from further away than
+	// that, if they were already close it stays) they're getting on with it
+	if ( guided && ! zoomedIn && dough?.visible ) {
+
+		const near = camera.position.distanceTo( dough.position ) < ZOOM_DISTANCE;
+		if ( ! near ) wasFar = true;
+		else if ( wasFar ) {
+
+			zoomedIn = true;
+			if ( ! getState().cut ) hideGuide();
+
+		}
+
+	}
 
 	// the line round the dough that cookies stay inside, shown while there's cutting to do
 	if ( trace ) {
