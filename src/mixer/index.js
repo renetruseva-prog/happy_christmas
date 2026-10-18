@@ -10,7 +10,7 @@ import { showStatus } from '../ui.js';
 import { runSequence, ease, easeOutBack } from '../core/sequence.js';
 import { loadMixed } from '../core/progress.js';
 import { TABLE_TOP, thingsOnTable, clearance } from '../core/table.js';
-import { bowlInfo, contentsTop, mixDough, stirDough } from '../bowl/index.js';
+import { bowlInfo, contentsTop, mixDough, stirDough, isOverBowl } from '../bowl/index.js';
 import { preloadHandTracker } from '../input/handTracking.js';
 import { HeldTool } from '../input/heldTool.js';
 import { buildMixer } from './model.js';
@@ -245,6 +245,7 @@ export function initMixer( { scene, room: kitchen, camera: cam, controls, canvas
 		controls,
 		canvas,
 		freeView: true,
+		workArea: isOverBowl,
 		verb: 'Mix',
 		guide: {
 			motion: 'circle',
@@ -255,7 +256,7 @@ export function initMixer( { scene, room: kitchen, camera: cam, controls, canvas
 			handMoving: 'keep moving your hand in circles',
 			handMissing: 'show your hand to the camera · Esc to put the mixer down',
 			mouseOn: 'keep moving in circles',
-			mouseOff: 'hold the mouse button and move in circles · C to use your hand · Esc to put it down',
+			mouseOff: 'hold the mouse button over the bowl and move in circles · drag anywhere else to turn the view · C to use your hand · Esc to put it down',
 		},
 		progress: () => progress,
 		onEscape: putDown,
