@@ -1,6 +1,6 @@
 // everything that touches the HTML overlay
 import { subscribe } from './core/state.js';
-import { resetProgress, isNewGame } from './core/progress.js';
+import { resetProgress, askToRestart, isNewGame } from './core/progress.js';
 import { COOKIE_COUNT, bakeBand } from './core/config.js';
 import './audio/sounds.js';
 
@@ -114,7 +114,7 @@ subscribe( ( { inBowl, total, mixed, mixing, doughOut, rolling, rolled, cookies,
 		const done = ( decor.cookies ?? [] ).filter( ( c ) => c && ( c.ice || c.items?.length ) ).length;
 		statusEl.textContent = `Decorating · ${ done } of ${ cookies.length } cookies decorated`;
 
-	} else if ( baked ) statusEl.textContent = `${ RESULTS[ baked.result ].status } · press R to start over`;
+	} else if ( baked ) statusEl.textContent = `${ RESULTS[ baked.result ].status } · use Restart to start over`;
 	else if ( baking ) statusEl.textContent = 'Baking… click the oven to take the cookies out';
 	else if ( cut && onTray.length === cookies.length ) statusEl.textContent = 'Put the baking tray in the oven';
 	else if ( cut ) statusEl.textContent = `Put the cookies on the baking tray · ${ onTray.length }/${ cookies.length }`;
@@ -122,7 +122,7 @@ subscribe( ( { inBowl, total, mixed, mixing, doughOut, rolling, rolled, cookies,
 	else if ( rolled ) statusEl.textContent = `Cut ${ COOKIE_COUNT } cookies out of the dough: with a star cutter, or draw your own shape`;
 	else if ( doughOut ) statusEl.textContent = 'Roll the dough out thin with the rolling pin';
 	else if ( mixed ) statusEl.textContent = 'The dough is ready! Take it out of the bowl';
-	else if ( inBowl.length === total ) statusEl.textContent = 'All ingredients are in the bowl! Grab the mixer · press R to start over';
+	else if ( inBowl.length === total ) statusEl.textContent = 'All ingredients are in the bowl! Grab the mixer';
 	else statusEl.textContent = `Bowl ${ inBowl.length }/${ total } · ${ names }`;
 	statusEl.style.opacity = 1;
 
@@ -242,7 +242,7 @@ bakeDecorate.addEventListener( 'click', () => {
 document.getElementById( 'restart-btn' ).addEventListener( 'click', ( e ) => {
 
 	e.currentTarget.blur(); // (so the keyboard doesn't press it again)
-	if ( confirm( 'Start over? Everything you baked so far will be cleared.' ) ) resetProgress();
+	askToRestart();
 
 } );
 document.getElementById( 'bake-over' ).addEventListener( 'click', () => resetProgress() );

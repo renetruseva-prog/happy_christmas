@@ -2,7 +2,6 @@
 import * as THREE from 'three/webgpu';
 import { getState, setState } from '../core/state.js';
 import { showHint, hideHint } from '../ui.js';
-import { resetProgress } from '../core/progress.js';
 import { isOverBowl } from '../bowl/index.js';
 import { pickRoots, pickRootOf, pickUp, putBack, releaseHeld, updateHeld } from '../ingredients.js';
 import { mixerHint, tryGrabMixer } from '../mixer/index.js';
@@ -38,8 +37,6 @@ export function initInteraction( { camera: cam, canvas, interactables: list } ) 
 	} );
 
 	window.addEventListener( 'keydown', ( e ) => {
-
-		if ( e.key === 'r' || e.key === 'R' ) resetProgress();
 
 		const { held } = getState();
 		if ( e.key === 'Escape' && held ) {

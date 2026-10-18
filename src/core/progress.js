@@ -1,6 +1,7 @@
 // saves how far the player got in the browser, so a refresh doesn't reset it
 import { subscribe } from './state.js';
 import { INGREDIENTS } from './config.js';
+import { isTyping } from './typing.js';
 
 const KEY = 'happy-christmas-progress';
 
@@ -110,6 +111,14 @@ export function resetProgress() {
 
 }
 
+// starting over from the Restart button: it asks first, so one stray click can't
+// wipe what was baked
+export function askToRestart() {
+
+	if ( confirm( 'Start over? Everything you baked so far will be cleared.' ) ) resetProgress();
+
+}
+
 // testing cheats (not mentioned anywhere in the game): Shift+A jumps to cutting the cookies, with the
 // dough rolled out; Shift+B to a batch of 6 cookies cut and ready on the baking tray. Both reload
 function readyToCut() {
@@ -148,7 +157,7 @@ window.addEventListener( 'keydown', ( e ) => {
 
 	const cheat = CHEATS[ e.code ];
 	if ( ! cheat || ! e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.repeat ) return;
-	if ( e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement ) return;
+	if ( isTyping( e ) ) return;
 	try {
 
 		localStorage.setItem( KEY, JSON.stringify( cheat() ) );
